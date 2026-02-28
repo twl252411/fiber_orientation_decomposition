@@ -22,7 +22,7 @@ def parse_args():
         "--ori-id",
         type=int,
         choices=[0, 1, 2],
-        default=0,
+        default=1,
         help="Index for ORI_2_AY[id], valid values: 0, 1, 2.",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible initialization.")
@@ -95,7 +95,7 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
     # ================== Predefined orientation ==========================
     pred_ori_tensor4 = reorientation.ori_tensor4_recon(inc_ori_tensor2)
     inc_ori_vecs = reorientation.orivector_optimization(
-        inc_ori_vecs, pred_ori_tensor4, beta, log_interval=0, )
+        inc_ori_vecs, pred_ori_tensor4, beta, log_interval=10, )
     angles = reorientation.optimized_ori_angles(inc_ori_vecs, angles)
 
     # Angles are fixed in packing loop, so rotation matrices can be precomputed once.
