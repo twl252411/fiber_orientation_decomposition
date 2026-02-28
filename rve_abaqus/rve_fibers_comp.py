@@ -72,7 +72,7 @@ def create_box_part(model, name, x_size, y_size, z_size):
 asp = 10
 inc_rad = 2.5
 inc_len = inc_rad * asp * 2.0
-extra_t = 0.15
+extra_t = 0.0
 rve_size = np.array(
     [inc_len * 2.0 + extra_t, inc_len * 2.0 + extra_t, inc_len * 2.0 + extra_t],
     dtype=float,
@@ -233,36 +233,8 @@ for tag, points_file, angles_file in discover_input_sets():
         vector=(-rve_size[0] / 2.0, -rve_size[1] / 2.0, -rve_size[2] / 2.0),
     )
 
-    a.InstanceFromBooleanMerge(
-        name="Part-New",
-        instances=(a.instances["Part-1-1"], a.instances["Part-2-1"]),
-        keepIntersections=ON,
-        originalInstances=DELETE,
-        domain=GEOMETRY,
-    )
-    a.deleteFeatures(("Part-New-1",))
-    del model.parts["Part-1"]
-    del model.parts["Part-2"]
-    model.parts.changeKey(fromName="Part-New", toName="Part-1")
-
-    final_part = model.parts["Part-1"]
-    a.Instance(name="Part-1-1", part=final_part, dependent=OFF)
-
-    # ---------------------------------------------------------------------------
-    # Compute volume fraction
-    # ---------------------------------------------------------------------------
-    selcell = final_part.cells.findAt(
-        (((rve_size[0] + extra_t) / 2.0, (rve_size[1] + extra_t) / 2.0, (rve_size[2] + extra_t) / 2.0),)
-    )
-    final_part.Set(cells=selcell, name="Set-M-1")
-    volume1 = final_part.getMassProperties(regions=final_part.sets["Set-M-1"].cells)["volume"]
-
-    inc_cells = final_part.cells[0:0]
-    for icell in final_part.cells:
-        if icell.index != selcell[0].index:
-            inc_cells += final_part.cells[icell.index:icell.index + 1]
-    final_part.Set(cells=inc_cells, name="Set-M-2")
-    volume2 = final_part.getMassProperties(regions=final_part.sets["Set-M-2"].cells)["volume"]
+    volume1 = matrix_part.getMassProperties()["volume"]
+    volume2 = fiber_part.getMassProperties()["volume"]
 
     print("Tag %s: particle volume fraction = %s" % (tag, volume2 / (volume2 + volume1)))
 
