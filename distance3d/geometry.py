@@ -136,6 +136,19 @@ BOX_COORDS = np.array(list(product([-0.5, 0.5], repeat=3)))
 
 
 @numba.njit(
+    numba.float64[::1](numba.float64[:, ::1], numba.float64[::1]),
+    cache=True)
+def transpose_rotate(pose, vector):
+    """Compute pose[:3, :3].T @ vector without non-contiguous views."""
+    x, y, z = vector[0], vector[1], vector[2]
+    out = np.empty(3, dtype=np.float64)
+    out[0] = pose[0, 0] * x + pose[1, 0] * y + pose[2, 0] * z
+    out[1] = pose[0, 1] * x + pose[1, 1] * y + pose[2, 1] * z
+    out[2] = pose[0, 2] * x + pose[1, 2] * y + pose[2, 2] * z
+    return out
+
+
+@numba.njit(
     numba.float64[:, :](numba.float64[:, ::1], numba.float64[::1]),
     cache=True)
 def convert_box_to_vertices(box2origin, size):
@@ -154,7 +167,22 @@ def convert_box_to_vertices(box2origin, size):
     box_points : array, shape (8, 3)
         Vertices of the box.
     """
-    return box2origin[:3, 3] + (BOX_COORDS * size).dot(box2origin[:3, :3].T)
+    box_points = np.empty((8, 3), dtype=np.float64)
+
+    r00, r01, r02 = box2origin[0, 0], box2origin[0, 1], box2origin[0, 2]
+    r10, r11, r12 = box2origin[1, 0], box2origin[1, 1], box2origin[1, 2]
+    r20, r21, r22 = box2origin[2, 0], box2origin[2, 1], box2origin[2, 2]
+    t0, t1, t2 = box2origin[0, 3], box2origin[1, 3], box2origin[2, 3]
+
+    for i in range(8):
+        x = BOX_COORDS[i, 0] * size[0]
+        y = BOX_COORDS[i, 1] * size[1]
+        z = BOX_COORDS[i, 2] * size[2]
+        box_points[i, 0] = t0 + x * r00 + y * r01 + z * r02
+        box_points[i, 1] = t1 + x * r10 + y * r11 + z * r12
+        box_points[i, 2] = t2 + x * r20 + y * r21 + z * r22
+
+    return box_points
 
 
 @numba.njit(
@@ -191,7 +219,7 @@ def support_function_cylinder(
     extreme_point : array, shape (3,)
         Extreme point along search direction.
     """
-    local_dir = np.dot(cylinder2origin[:3, :3].T, search_direction)
+    local_dir = transpose_rotate(cylinder2origin, search_direction)
 
     s = math.sqrt(local_dir[0] * local_dir[0] + local_dir[1] * local_dir[1])
     if local_dir[2] < 0.0:
@@ -240,7 +268,7 @@ def support_function_capsule(
     extreme_point : array, shape (3,)
         Extreme point along search direction.
     """
-    local_dir = np.dot(capsule2origin[:3, :3].T, search_direction)
+    local_dir = transpose_rotate(capsule2origin, search_direction)
 
     s = math.sqrt(local_dir[0] * local_dir[0] + local_dir[1] * local_dir[1]
                   + local_dir[2] * local_dir[2])
@@ -279,7 +307,7 @@ def support_function_ellipsoid(
     extreme_point : array, shape (3,)
         Extreme point along search direction.
     """
-    local_dir = np.dot(ellipsoid2origin[:3, :3].T, search_direction)
+    local_dir = transpose_rotate(ellipsoid2origin, search_direction)
     local_vertex = norm_vector(local_dir * radii) * radii
     return transform_point(ellipsoid2origin, local_vertex)
 
@@ -306,7 +334,7 @@ def support_function_box(search_direction, box2origin, half_lengths):
     extreme_point : array, shape (3,)
         Extreme point along search direction.
     """
-    local_dir = np.dot(box2origin[:3, :3].T, search_direction)
+    local_dir = transpose_rotate(box2origin, search_direction)
     local_vertex = np.sign(local_dir) * half_lengths
     return transform_point(box2origin, local_vertex)
 
@@ -440,7 +468,7 @@ def support_function_cone(search_direction, cone2origin, radius, height):
     extreme_point : array, shape (3,)
         Extreme point along search direction.
     """
-    local_dir = np.dot(cone2origin[:3, :3].T, search_direction)
+    local_dir = transpose_rotate(cone2origin, search_direction)
     disk_point = np.array([local_dir[0], local_dir[1], 0.0])
     norm = np.linalg.norm(disk_point)
     if norm == 0.0:

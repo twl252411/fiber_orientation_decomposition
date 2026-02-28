@@ -140,7 +140,12 @@ def transform_point(A2B, point_in_A):
     point_in_B : array, shape (3,)
         Point in frame B.
     """
-    return A2B[:3, 3] + np.dot(A2B[:3, :3], point_in_A)
+    x, y, z = point_in_A[0], point_in_A[1], point_in_A[2]
+    point_in_B = np.empty(3, dtype=np.float64)
+    point_in_B[0] = A2B[0, 3] + A2B[0, 0] * x + A2B[0, 1] * y + A2B[0, 2] * z
+    point_in_B[1] = A2B[1, 3] + A2B[1, 0] * x + A2B[1, 1] * y + A2B[1, 2] * z
+    point_in_B[2] = A2B[2, 3] + A2B[2, 0] * x + A2B[2, 1] * y + A2B[2, 2] * z
+    return point_in_B
 
 
 @numba.njit(numba.float64[:, :](numba.float64[:, ::1], numba.float64[:, ::1]),
@@ -161,7 +166,21 @@ def transform_points(A2B, points_in_A):
     points_in_A : array, shape (n_points, 3)
         Points in frame B.
     """
-    return np.dot(points_in_A, A2B[:3, :3].T) + A2B[:3, 3]
+    n_points = points_in_A.shape[0]
+    points_in_B = np.empty((n_points, 3), dtype=np.float64)
+
+    r00, r01, r02 = A2B[0, 0], A2B[0, 1], A2B[0, 2]
+    r10, r11, r12 = A2B[1, 0], A2B[1, 1], A2B[1, 2]
+    r20, r21, r22 = A2B[2, 0], A2B[2, 1], A2B[2, 2]
+    t0, t1, t2 = A2B[0, 3], A2B[1, 3], A2B[2, 3]
+
+    for i in range(n_points):
+        x, y, z = points_in_A[i, 0], points_in_A[i, 1], points_in_A[i, 2]
+        points_in_B[i, 0] = r00 * x + r01 * y + r02 * z + t0
+        points_in_B[i, 1] = r10 * x + r11 * y + r12 * z + t1
+        points_in_B[i, 2] = r20 * x + r21 * y + r22 * z + t2
+
+    return points_in_B
 
 
 @numba.njit(numba.float64[:, :](numba.float64[:, ::1], numba.float64[:, :]),
@@ -182,7 +201,20 @@ def transform_directions(A2B, directions_in_A):
     points_in_A : array, shape (n_points, 3)
         Points in frame B.
     """
-    return np.dot(directions_in_A, A2B[:3, :3].T)
+    n_dirs = directions_in_A.shape[0]
+    directions_in_B = np.empty((n_dirs, 3), dtype=np.float64)
+
+    r00, r01, r02 = A2B[0, 0], A2B[0, 1], A2B[0, 2]
+    r10, r11, r12 = A2B[1, 0], A2B[1, 1], A2B[1, 2]
+    r20, r21, r22 = A2B[2, 0], A2B[2, 1], A2B[2, 2]
+
+    for i in range(n_dirs):
+        x, y, z = directions_in_A[i, 0], directions_in_A[i, 1], directions_in_A[i, 2]
+        directions_in_B[i, 0] = r00 * x + r01 * y + r02 * z
+        directions_in_B[i, 1] = r10 * x + r11 * y + r12 * z
+        directions_in_B[i, 2] = r20 * x + r21 * y + r22 * z
+
+    return directions_in_B
 
 
 @numba.njit(numba.float64[::1](numba.float64[:, ::1], numba.float64[::1]),
@@ -203,8 +235,15 @@ def inverse_transform_point(A2B, point_in_B):
     point_in_A : array, shape (3,)
         Point in frame A.
     """
-    RT = A2B[:3, :3].T
-    return np.dot(RT, point_in_B) - np.dot(RT, A2B[:3, 3])
+    dx = point_in_B[0] - A2B[0, 3]
+    dy = point_in_B[1] - A2B[1, 3]
+    dz = point_in_B[2] - A2B[2, 3]
+
+    point_in_A = np.empty(3, dtype=np.float64)
+    point_in_A[0] = A2B[0, 0] * dx + A2B[1, 0] * dy + A2B[2, 0] * dz
+    point_in_A[1] = A2B[0, 1] * dx + A2B[1, 1] * dy + A2B[2, 1] * dz
+    point_in_A[2] = A2B[0, 2] * dx + A2B[1, 2] * dy + A2B[2, 2] * dz
+    return point_in_A
 
 
 @numba.njit(numba.float64[:, :](numba.float64[:, :]), cache=True)
@@ -224,7 +263,10 @@ def invert_transform(A2B):
     B2A = np.empty((4, 4))
     RT = A2B[:3, :3].T
     B2A[:3, :3] = RT
-    B2A[:3, 3] = -np.dot(RT, A2B[:3, 3])
+    t0, t1, t2 = A2B[0, 3], A2B[1, 3], A2B[2, 3]
+    B2A[0, 3] = -(A2B[0, 0] * t0 + A2B[1, 0] * t1 + A2B[2, 0] * t2)
+    B2A[1, 3] = -(A2B[0, 1] * t0 + A2B[1, 1] * t1 + A2B[2, 1] * t2)
+    B2A[2, 3] = -(A2B[0, 2] * t0 + A2B[1, 2] * t1 + A2B[2, 2] * t2)
     B2A[3, :3] = 0.0
     B2A[3, 3] = 1.0
     return B2A
