@@ -69,7 +69,14 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
     inc_volume = np.pi * inc_size_base[0] ** 2 * inc_size_base[1]
     inc_num = int(np.prod(rve_size) * inc_vf / inc_volume)
     inc_size = inc_size_base * inc_enl
-    inc_cutoff = np.linalg.norm(inc_size)
+    # Broad-phase cutoff for possible cylinder-cylinder contact.
+    # For a centered cylinder, the farthest vertex from center is
+    # sqrt((length / 2)^2 + radius^2). Two cylinders can intersect only if
+    # center distance <= 2 * farthest_vertex_distance.
+    #
+    # NOTE: Using norm([radius, length]) is too small and may miss colliding
+    # pairs in broad-phase neighbor search, which leaves residual overlaps.
+    inc_cutoff = np.sqrt(inc_size[1] ** 2 + 4.0 * inc_size[0] ** 2)
     inv_rve_size = 1.0 / rve_size
 
     # Damping coefficients
