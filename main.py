@@ -22,7 +22,7 @@ def parse_args():
         "--ori-id",
         type=int,
         choices=[0, 1, 2],
-        default=1,
+        default=0,
         help="Index for ORI_2_AY[id], valid values: 0, 1, 2.",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible initialization.")
