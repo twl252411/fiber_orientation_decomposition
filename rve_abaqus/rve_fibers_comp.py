@@ -11,22 +11,42 @@ Mdb()
 
 
 def discover_input_sets():
-    """Discover peri_points/peri_angles datasets from current output folder."""
+    """Discover peri_points/peri_angles datasets from existing point_angle_files folders."""
     datasets = []
-    input_dir = "point_angle_files"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(os.getcwd(), "point_angle_files"),
+        os.path.join(script_dir, "point_angle_files"),
+        os.path.join(script_dir, "..", "point_angle_files"),
+    ]
 
-    points_pattern = os.path.join(input_dir, "peri_points_*.txt")
-    for points_path in sorted(glob.glob(points_pattern)):
-        base = os.path.basename(points_path)
-        tag = base[len("peri_points_"):-4]
-        angles_path = os.path.join(input_dir, "peri_angles_%s.txt" % tag)
-        if os.path.exists(angles_path):
-            datasets.append((tag, points_path, angles_path))
+    searched_dirs = []
+    seen = set()
+    for candidate in candidates:
+        input_dir = os.path.abspath(candidate)
+        if input_dir in seen:
+            continue
+        seen.add(input_dir)
+        searched_dirs.append(input_dir)
+        if not os.path.isdir(input_dir):
+            continue
+
+        points_pattern = os.path.join(input_dir, "peri_points_*.txt")
+        for points_path in sorted(glob.glob(points_pattern)):
+            base = os.path.basename(points_path)
+            tag = base[len("peri_points_"):-4]
+            angles_path = os.path.join(input_dir, "peri_angles_%s.txt" % tag)
+            if os.path.exists(angles_path):
+                datasets.append((tag, points_path, angles_path))
+
+        if datasets:
+            break
 
     if not datasets:
         raise ValueError(
-            "No dataset found in point_angle_files/. "
+            "No dataset found in point_angle_files/. Searched: %s. "
             "Expected files like peri_points_a1.txt and peri_angles_a1.txt."
+            % ", ".join(searched_dirs)
         )
     return datasets
 
