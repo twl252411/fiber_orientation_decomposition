@@ -22,7 +22,7 @@ def parse_args():
         "--ori-id",
         type=int,
         choices=[0, 1, 2],
-        default=0,
+        default=2,
         help="Index for ORI_2_AY[id], valid values: 0, 1, 2.",
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible initialization.")
@@ -67,15 +67,15 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
     inc_ori_tensor2 = ORI_2_AY[ori_id]
 
     inc_volume = np.pi * inc_size_base[0] ** 2 * inc_size_base[1]
-    inc_num = int(np.prod(rve_size) * inc_vf / inc_volume)
+    inc_num = int(np.prod(rve_size) * inc_vf / inc_volume) + 1
     inc_size = inc_size_base * inc_enl
     inc_cutoff = np.sqrt(inc_size[1] ** 2 + 4.0 * inc_size[0] ** 2)
     inv_rve_size = 1.0 / rve_size
 
     # Damping coefficients
-    alpha = 0.5
+    alpha = 0.1
     beta = 1.0
-    tolerance = inc_size[0] * 1.0e-3
+    tolerance = inc_size[0] * 1.0e-4
 
     # ====================== centers and angles =========================
     points = rng.uniform([0.0, 0.0, 0.0], rve_size, size=(inc_num, 3))
