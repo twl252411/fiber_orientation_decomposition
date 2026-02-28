@@ -231,7 +231,14 @@ def current_ori_tensor4(inc_ori_vecs):
     # Return the computed 4th-order orientation tensor
     return curt_ori_tensor4
 
-def orivector_optimization(inc_ori_vecs, pred_ori_tensor4, alpha=0.5, max_iter=1e5, tolerance=1e-4):
+def orivector_optimization(
+    inc_ori_vecs,
+    pred_ori_tensor4,
+    alpha=0.5,
+    max_iter=1e5,
+    tolerance=1e-4,
+    log_interval=1,
+):
     """
     Optimize orientation vectors of all the inclusions to match a predefined 4th-order orientation tensor.
 
@@ -270,7 +277,8 @@ def orivector_optimization(inc_ori_vecs, pred_ori_tensor4, alpha=0.5, max_iter=1
 
         # Calculate the potential function
         potential = np.sum(temp_ori_tensor4**2)
-        print(f"Iteration {iter_num}: Potential = {potential:.8f}")
+        if log_interval > 0 and (iter_num % log_interval == 0):
+            print(f"Iteration {iter_num}: Potential = {potential:.8f}")
 
         # Update orientation vectors using gradient descent
         inc_ori_vecs -= alpha * gradients

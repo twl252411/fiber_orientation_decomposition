@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Black">
+    <option name="sdkName" value="/opt/anaconda3" />
+  </component>
+  <component name="GitLabMergeRequestsSettings"><![CDATA[{}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{}]]></component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="/opt/anaconda3" project-jdk-type="Python SDK" />
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/../pytorch-wgan/.idea/inspectionProfiles/profiles_settings.xml">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pytorch-wgan/.idea/.gitignore">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+  </component>
+</project>
