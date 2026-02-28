@@ -7,8 +7,6 @@ import os
 import numpy as np
 
 executeOnCaeStartup()
-Mdb()
-
 
 def discover_input_sets():
     datasets = []
@@ -80,8 +78,10 @@ rve_size = np.array(
 
 
 for tag, points_file, angles_file in discover_input_sets():
-    cae_name = "fiber_rve_%s.cae" % tag
 
+    Mdb()
+
+    cae_name = "fiber_rve_%s.cae" % tag
     # Input format compatible with current generator:
     # point_angle_files/peri_points_<tag>.txt
     # point_angle_files/peri_angles_<tag>.txt
