@@ -11,42 +11,26 @@ Mdb()
 
 
 def discover_input_sets():
-    """Discover peri_points/peri_angles datasets from existing point_angle_files folders."""
     datasets = []
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(os.getcwd(), "point_angle_files"),
-        os.path.join(script_dir, "point_angle_files"),
-        os.path.join(script_dir, "..", "point_angle_files"),
-    ]
 
-    searched_dirs = []
-    seen = set()
-    for candidate in candidates:
-        input_dir = os.path.abspath(candidate)
-        if input_dir in seen:
-            continue
-        seen.add(input_dir)
-        searched_dirs.append(input_dir)
-        if not os.path.isdir(input_dir):
-            continue
+    PROJECT_ROOT = r"D:\github\fiber_orientation_decomposition"  # <- 改成你的主目录（包含 point_angle_files 和 rve_abaqus）
+    input_dir = os.path.join(PROJECT_ROOT, "point_angle_files")
 
-        points_pattern = os.path.join(input_dir, "peri_points_*.txt")
-        for points_path in sorted(glob.glob(points_pattern)):
-            base = os.path.basename(points_path)
-            tag = base[len("peri_points_"):-4]
-            angles_path = os.path.join(input_dir, "peri_angles_%s.txt" % tag)
-            if os.path.exists(angles_path):
-                datasets.append((tag, points_path, angles_path))
+    if not os.path.isdir(input_dir):
+        raise ValueError("Required folder not found: %s" % input_dir)
 
-        if datasets:
-            break
+    points_pattern = os.path.join(input_dir, "peri_points_*.txt")
+    for points_path in sorted(glob.glob(points_pattern)):
+        base = os.path.basename(points_path)
+        tag = base[len("peri_points_"):-4]
+        angles_path = os.path.join(input_dir, "peri_angles_%s.txt" % tag)
+        if os.path.isfile(angles_path):
+            datasets.append((tag, points_path, angles_path))
 
     if not datasets:
         raise ValueError(
-            "No dataset found in point_angle_files/. Searched: %s. "
-            "Expected files like peri_points_a1.txt and peri_angles_a1.txt."
-            % ", ".join(searched_dirs)
+            "No dataset found in: %s. Expected peri_points_*.txt + peri_angles_*.txt pairs."
+            % input_dir
         )
     return datasets
 
