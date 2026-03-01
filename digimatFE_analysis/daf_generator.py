@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
 
 SECTION_MARKER = "##########################################"
@@ -12,7 +12,7 @@ SECTION_MARKER = "##########################################"
 @dataclass(frozen=True)
 class DAFParameters:
     material_density: float = 1.0
-    material2_density: float = 1.0
+    material2_density: float | None = None
     young_modulus: float = 1.0
     poisson_ratio: float = 0.25
     phase2_diameter: float = 5.0
@@ -177,41 +177,24 @@ def generate_analysis_file(
     return output_path
 
 
-def generate_analysis_files(
-    indices: Iterable[int] = (1, 2, 3),
-    input_dir: Path = Path("point_angle_files"),
-    output_dir: Path = Path("digimatFE_analysis"),
-    template_path: Path = Path("digimatFE_analysis/Analysis_a1.daf"),
-    params: DAFParameters = DAFParameters(),
-) -> list[Path]:
-    generated_paths: list[Path] = []
-    for idx in indices:
-        generated_paths.append(
-            generate_analysis_file(
-                index=idx,
-                input_dir=input_dir,
-                output_dir=output_dir,
-                template_path=template_path,
-                params=params,
-            )
-        )
-    return generated_paths
-
-
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate Analysis_a{x}.daf files from point/angle files."
+        description="Generate one Digimat-FE thermo-mechanical Analysis_a{x}.daf from one point/angle file pair."
     )
     parser.add_argument(
-        "--indices",
+        "--index",
         type=int,
-        nargs="+",
-        default=[1, 2, 3],
-        help="Indices x for generating Analysis_a{x}.daf. Default: 1 2 3.",
+        required=True,
+        help="Index x for one input pair: angles_a{x} + point(s)_a{x}.",
     )
     parser.add_argument("--input-dir", type=Path, default=Path("point_angle_files"))
     parser.add_argument("--output-dir", type=Path, default=Path("digimatFE_analysis"))
-    parser.add_argument("--template", type=Path, default=Path("digimatFE_analysis/Analysis_a1.daf"))
+    parser.add_argument(
+        "--template",
+        type=Path,
+        default=Path("digimatFE_analysis/Analysis_a0.daf"),
+        help="Thermo-mechanical DAF template (default: Analysis_a0.daf).",
+    )
 
     parser.add_argument("--material-density", type=float, default=1.0)
     parser.add_argument(
@@ -241,17 +224,16 @@ def main() -> None:
         element_size=args.element_size,
         minimum_element_size=args.minimum_element_size,
     )
-    generated = generate_analysis_files(
-        indices=args.indices,
+    output_path = generate_analysis_file(
+        index=args.index,
         input_dir=args.input_dir,
         output_dir=args.output_dir,
         template_path=args.template,
         params=params,
     )
 
-    print("Generated files:")
-    for path in generated:
-        print(path)
+    print("Generated file:")
+    print(output_path)
 
 
 if __name__ == "__main__":
