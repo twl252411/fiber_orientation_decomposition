@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
-import os
 
 
 # ============================= User Config =============================
 INDEX = 0
-PROJECT_ROOT = r"D:\github\fiber_orientation_decomposition"
-INPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
+INPUT_DIR = Path("digimatFE_analysis")
 OUTPUT_DIR: Path | None = None
+TMP_DIR_PREFIX = "tmp_a"
 
 
 def _format_float(value: float) -> str:
@@ -73,7 +72,7 @@ def extract_and_save(
     input_dir: Path = Path("digimatFE_analysis"),
     output_dir: Path | None = None,
 ) -> tuple[Path, Path]:
-    eng_path = input_dir / f"Analysis_a{index}.eng"
+    eng_path = input_dir / f"{TMP_DIR_PREFIX}{index}" / f"Analysis_a{index}.eng"
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
 
