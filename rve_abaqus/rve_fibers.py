@@ -1,6 +1,7 @@
 from abaqus import *
 from abaqusConstants import *
 from driverUtils import executeOnCaeStartup
+from pathlib import Path
 import glob
 import os
 import numpy as np
@@ -9,7 +10,7 @@ executeOnCaeStartup()
 
 
 # ============================= User Config =============================
-PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
+PROJECT_ROOT = Path(os.getcwd()).parent
 INPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
 
 

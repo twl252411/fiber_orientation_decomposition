@@ -7,9 +7,9 @@ import os
 
 # ============================= User Config =============================
 INDEX = 1
-PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
-INPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+INPUT_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "digimat_analysis")
 
 # Material1 (isotropic): adjustable
 M1_YOUNG = 0.0448

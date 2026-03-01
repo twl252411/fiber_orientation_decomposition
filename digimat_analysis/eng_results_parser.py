@@ -8,7 +8,7 @@ import os
 # ============================= User Config =============================
 INDEX = 1
 PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
-INPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
+INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
 TMP_DIR_PREFIX = "tmp_a"
 
