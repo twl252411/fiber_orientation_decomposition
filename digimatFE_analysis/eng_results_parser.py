@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
-import os
 
 
 # ============================= User Config =============================
-INDEX = 1
-PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
-INPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
+INDEX = 0
+INPUT_DIR = Path("digimatFE_analysis")
 OUTPUT_DIR: Path | None = None
 TMP_DIR_PREFIX = "tmp_a"
 
@@ -74,17 +72,16 @@ def extract_and_save(
     input_dir: Path = Path("digimatFE_analysis"),
     output_dir: Path | None = None,
 ) -> tuple[Path, Path]:
-
-    eng_path = Path(input_dir) / f"{TMP_DIR_PREFIX}{index}" / f"Analysis_a{index}_Analysis1.eng"
+    eng_path = input_dir / f"{TMP_DIR_PREFIX}{index}" / f"Analysis_a{index}.eng"
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
 
     stiffness, cte = parse_eng_file(eng_path)
 
     out_dir = input_dir if output_dir is None else output_dir
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
-    stiffness_path = Path(out_dir) / f"Analysis_a{index}_Stiffness.txt"
-    cte_path = Path(out_dir) / f"Analysis_a{index}_CTE.txt"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stiffness_path = out_dir / f"Analysis_a{index}_Stiffness.txt"
+    cte_path = out_dir / f"Analysis_a{index}_CTE.txt"
 
     _write_csv_rows(stiffness_path, stiffness)
     _write_csv_rows(cte_path, cte)

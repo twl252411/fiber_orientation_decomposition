@@ -4,13 +4,12 @@ import subprocess
 from pathlib import Path
 
 
-DEFAULT_DIGIMAT_BAT = Path(r"C:\\MSC.Software\\Digimat\\2023.1\\DigimatFE\\exec\\DigimatFE.bat")
-SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_DIGIMAT_BAT = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatFE\exec\DigimatFE.bat")
 
 # ============================= User Config =============================
 # Run only one DAF file each time.
-INDEX = 1
-ANALYSIS_DIR = SCRIPT_DIR
+INDEX = 0
+ANALYSIS_DIR = Path("digimatFE_analysis")
 DIGIMAT_BAT = DEFAULT_DIGIMAT_BAT
 USE_RUN_FE_WORKFLOW_FLAG = True
 FALLBACK_WITHOUT_RUN_FE_WORKFLOW_FLAG = True
@@ -87,29 +86,14 @@ def run_digimat_daf(
 
 def run_digimat_by_index(
     index: int,
-    analysis_dir: Path = ANALYSIS_DIR,
+    analysis_dir: Path = Path("digimatFE_analysis"),
     digimat_bat: Path = DEFAULT_DIGIMAT_BAT,
     use_run_fe_workflow_flag: bool = True,
     fallback_without_run_fe_workflow_flag: bool = True,
     timeout: float | None = None,
     dry_run: bool = False,
 ) -> subprocess.CompletedProcess[str] | None:
-    analysis_dir = Path(analysis_dir)
-    if not analysis_dir.is_absolute():
-        cwd_candidate = (Path.cwd() / analysis_dir).resolve()
-        script_candidate = (SCRIPT_DIR / analysis_dir).resolve()
-        if cwd_candidate.exists():
-            analysis_dir = cwd_candidate
-        elif script_candidate.exists():
-            analysis_dir = script_candidate
-        elif analysis_dir.name == SCRIPT_DIR.name:
-            # Common misconfiguration: analysis_dir="digimatFE_analysis" while script already lives there.
-            analysis_dir = SCRIPT_DIR
-        else:
-            analysis_dir = script_candidate
-    else:
-        analysis_dir = analysis_dir.resolve()
-
+    analysis_dir = analysis_dir.resolve()
     daf_path = (analysis_dir / f"Analysis_a{index}.daf").resolve()
     tmp_dir = analysis_dir / f"tmp_a{index}"
     tmp_dir.mkdir(parents=True, exist_ok=True)
