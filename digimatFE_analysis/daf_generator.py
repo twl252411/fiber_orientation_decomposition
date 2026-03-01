@@ -12,7 +12,7 @@ SECTION_MARKER = "##########################################"
 @dataclass(frozen=True)
 class DAFParameters:
     material_density: float = 1.0
-    material2_density: float | None = None
+    material2_density: float = 1.0
     young_modulus: float = 1.0
     poisson_ratio: float = 0.25
     phase2_diameter: float = 5.0
