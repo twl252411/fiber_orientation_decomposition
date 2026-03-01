@@ -9,7 +9,7 @@ executeOnCaeStartup()
 
 
 # ============================= User Config =============================
-PROJECT_ROOT = r"H:\github\fiber_orientation_decomposition"
+PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
 INPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
 
 
