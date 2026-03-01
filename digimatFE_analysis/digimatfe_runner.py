@@ -9,7 +9,7 @@ DEFAULT_DIGIMAT_BAT = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatFE\exec\Digim
 # ============================= User Config =============================
 # Run only one DAF file each time.
 INDEX = 0
-ANALYSIS_DIR = Path("digimatFE_analysis")
+ANALYSIS_DIR = Path("H:\github\fiber_orientation_decomposition\digimatFE_analysis")
 DIGIMAT_BAT = DEFAULT_DIGIMAT_BAT
 USE_RUN_FE_WORKFLOW_FLAG = True
 FALLBACK_WITHOUT_RUN_FE_WORKFLOW_FLAG = True

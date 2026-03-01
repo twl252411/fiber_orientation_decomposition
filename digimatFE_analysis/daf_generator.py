@@ -2,26 +2,28 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
+import os
 
 
 # ============================= User Config =============================
 INDEX = 1
-INPUT_DIR = Path("point_angle_files")
-OUTPUT_DIR = Path("digimatFE_analysis")
+PROJECT_ROOT = r"H:\github\fiber_orientation_decomposition"
+INPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
 
 # Material1 (isotropic): adjustable
-M1_YOUNG = 1.0
-M1_POISSON = 0.25
-M1_THERMAL_EXPANSION = 0.0
+M1_YOUNG = 0.0448
+M1_POISSON = 0.35
+M1_THERMAL_EXPANSION = 2.6E-5
 
 # Material2 (transversely isotropic): 7 adjustable parameters
-M2_AXIAL_YOUNG = 1.0
-M2_INPLANE_YOUNG = 0.2
-M2_INPLANE_POISSON = 0.2
-M2_TRANSVERSE_POISSON = 0.2
-M2_TRANSVERSE_SHEAR = 0.25
-M2_AXIAL_CTE = 0.0
-M2_INPLANE_CTE = 0.0
+M2_AXIAL_YOUNG = 0.23313
+M2_INPLANE_YOUNG = 0.02311
+M2_INPLANE_POISSON = 0.404
+M2_TRANSVERSE_POISSON = 0.20
+M2_TRANSVERSE_SHEAR = 0.0897
+M2_AXIAL_CTE = -2.4E-6
+M2_INPLANE_CTE = 6.4E-6
 
 # Phase2 / mesh / rve: adjustable
 PHASE2_VOLUME_FRACTION = 0.15
@@ -212,7 +214,7 @@ def _format_value(value: float | str) -> str:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
-        return f"{float(value):.15e}"
+        return f"{float(value):.12e}"
     return str(value)
 
 
@@ -238,6 +240,7 @@ def _read_table(path: Path, min_cols: int) -> list[list[float]]:
 
 def _resolve_input_file(input_dir: Path, name_candidates: Sequence[str]) -> Path:
     for name in name_candidates:
+        input_dir = Path(input_dir)
         candidate = input_dir / name
         if candidate.exists():
             return candidate
@@ -303,18 +306,12 @@ def generate_one_daf(index: int = INDEX) -> Path:
         INPUT_DIR,
         (
             f"angles_a{index}.txt",
-            f"angles_a{index}",
-            f"angle_a{index}.txt",
-            f"angle_a{index}",
         ),
     )
     point_path = _resolve_input_file(
         INPUT_DIR,
         (
             f"points_a{index}.txt",
-            f"points_a{index}",
-            f"point_a{index}.txt",
-            f"point_a{index}",
         ),
     )
 
@@ -322,8 +319,8 @@ def generate_one_daf(index: int = INDEX) -> Path:
     angles = _read_table(angle_path, min_cols=2)
     output_text = _build_daf_text(positions, angles)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = OUTPUT_DIR / f"Analysis_a{index}.daf"
+    Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    output_path = Path(OUTPUT_DIR) / f"Analysis_a{index}.daf"
     output_path.write_text(output_text, encoding="utf-8")
     return output_path
 

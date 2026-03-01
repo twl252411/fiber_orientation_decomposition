@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
+import os
 
 
 # ============================= User Config =============================
 INDEX = 0
-INPUT_DIR = Path("digimatFE_analysis")
+PROJECT_ROOT = r"D:\github\fiber_orientation_decomposition"
+INPUT_DIR = os.path.join(PROJECT_ROOT, "digimatFE_analysis")
 OUTPUT_DIR: Path | None = None
 
 
