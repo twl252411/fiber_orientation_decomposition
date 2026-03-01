@@ -93,11 +93,15 @@ def run_digimat_by_index(
     timeout: float | None = None,
     dry_run: bool = False,
 ) -> subprocess.CompletedProcess[str] | None:
-    daf_path = analysis_dir / f"Analysis_a{index}.daf"
+    analysis_dir = analysis_dir.resolve()
+    daf_path = (analysis_dir / f"Analysis_a{index}.daf").resolve()
+    tmp_dir = analysis_dir / f"tmp_a{index}"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+
     return run_digimat_daf(
         daf_path=daf_path,
         digimat_bat=digimat_bat,
-        working_dir=analysis_dir,
+        working_dir=tmp_dir,
         job_name=f"Analysis_a{index}",
         use_run_fe_workflow_flag=use_run_fe_workflow_flag,
         fallback_without_run_fe_workflow_flag=fallback_without_run_fe_workflow_flag,
