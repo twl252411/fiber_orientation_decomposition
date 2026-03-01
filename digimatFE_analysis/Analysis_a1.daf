@@ -1,4 +1,3 @@
-
 ##########################################
 MATERIAL
 name = Material1
@@ -7,6 +6,8 @@ density = 1.000000000000000e+00
 elastic_model = isotropic
 Young = 1.000000000000000e+00
 Poisson = 2.500000000000000e-01
+thermal_expansion = 0.000000000000000e+00
+reference_temperature = 0.000000000000000e+00
 
 ##########################################
 MATERIAL
@@ -19,6 +20,9 @@ inPlane_Young = 2.000000000000000e-01
 inPlane_Poisson = 2.000000000000000e-01
 transverse_Poisson = 2.000000000000000e-01
 transverse_shear = 2.500000000000000e-01
+axial_CTE = 0.000000000000000e+00
+inPlane_CTE = 0.000000000000000e+00
+reference_temperature = 0.000000000000000e+00
 
 ##########################################
 PHASE
@@ -379,7 +383,16 @@ history = monotonic
 quasi_static = on
 theta_load = 9.000000000000000e+01
 phi_load = 0.000000000000000e+00
-required_components = E1_E2_E3_G12_G23_G13_
+required_components = E1_E2_E3_G12_G23_G13_CTE123_
+
+##########################################
+LOADING
+name = Temperature
+type = temperature
+initial_temperature = 0.000000000000000e+00
+peak_temperature = 1.000000000000000e+00
+history = monotonic
+temperature_load_application = concurrent
 
 ##########################################
 RVE
@@ -400,7 +413,7 @@ curvature_control = on
 chordal_deviation_ratio = 1.000000000000000e-01
 nb_refinement_steps = 5
 model_layer_interfaces = off
-seed_size = 4.999999999999999e+00
+seed_size = 5.000000000000000e+00
 share_nodes = off
 periodic_mesh = off
 cohesive_element_size_ratio = 2.000000000000000e-01
@@ -408,8 +421,8 @@ cohesive_element_size_ratio = 2.000000000000000e-01
 ##########################################
 ANALYSISFE
 name = Analysis1
-type = mechanical
-loading_name = Mechanical
+type = thermo_mechanical
+loading_name = Mechanical,Temperature
 final_time = 1.000000000000000e+00
 max_time_inc = 1.000000000000000e+00
 min_time_inc = 1.000000000000000e-01
@@ -434,7 +447,6 @@ nb_cpus = 8
 fe_solver_type = iterative
 fe_field_output_frequency = 1
 use_output_time_points = yes
-
 
 ##########################################
 GLOBAL_SETTINGS

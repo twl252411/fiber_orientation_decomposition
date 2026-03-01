@@ -1,32 +1,219 @@
 from __future__ import annotations
 
-import argparse
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
 
+# ============================= User Config =============================
+INDEX = 1
+INPUT_DIR = Path("point_angle_files")
+OUTPUT_DIR = Path("digimatFE_analysis")
+
+# Material1 (isotropic): adjustable
+M1_YOUNG = 1.0
+M1_POISSON = 0.25
+M1_THERMAL_EXPANSION = 0.0
+
+# Material2 (transversely isotropic): 7 adjustable parameters
+M2_AXIAL_YOUNG = 1.0
+M2_INPLANE_YOUNG = 0.2
+M2_INPLANE_POISSON = 0.2
+M2_TRANSVERSE_POISSON = 0.2
+M2_TRANSVERSE_SHEAR = 0.25
+M2_AXIAL_CTE = 0.0
+M2_INPLANE_CTE = 0.0
+
+# Phase2 / mesh / rve: adjustable
+PHASE2_VOLUME_FRACTION = 0.15
+INCLUSION_DIAMETER = 5.0
+INCLUSION_SIZE = 50.0
+ELEMENT_SIZE = 2.0
+MINIMUM_ELEMENT_SIZE = 0.25
+RVE_SIZE = 100.0
+
+# Other constants (usually unchanged)
+MATERIAL1_DENSITY = 1.0
+MATERIAL2_DENSITY = 1.0
+REFERENCE_TEMPERATURE = 0.0
+PHASE1_VOLUME_FRACTION = 1.0 - PHASE2_VOLUME_FRACTION
+
+
+MATERIAL1_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Material1"),
+    ("type", "elastic"),
+    ("density", MATERIAL1_DENSITY),
+    ("elastic_model", "isotropic"),
+    ("Young", M1_YOUNG),
+    ("Poisson", M1_POISSON),
+    ("thermal_expansion", M1_THERMAL_EXPANSION),
+    ("reference_temperature", REFERENCE_TEMPERATURE),
+]
+
+MATERIAL2_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Material2"),
+    ("type", "elastic"),
+    ("density", MATERIAL2_DENSITY),
+    ("elastic_model", "transversely_isotropic"),
+    ("axial_Young", M2_AXIAL_YOUNG),
+    ("inPlane_Young", M2_INPLANE_YOUNG),
+    ("inPlane_Poisson", M2_INPLANE_POISSON),
+    ("transverse_Poisson", M2_TRANSVERSE_POISSON),
+    ("transverse_shear", M2_TRANSVERSE_SHEAR),
+    ("axial_CTE", M2_AXIAL_CTE),
+    ("inPlane_CTE", M2_INPLANE_CTE),
+    ("reference_temperature", REFERENCE_TEMPERATURE),
+]
+
+# ------------------------------- Phases -------------------------------
+PHASE1_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Phase1"),
+    ("type", "matrix"),
+    ("volume_fraction", PHASE1_VOLUME_FRACTION),
+    ("material", "Material1"),
+]
+
+PHASE2_FIXED_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Phase2"),
+    ("type", "inclusion_fe"),
+    ("volume_fraction", PHASE2_VOLUME_FRACTION),
+    ("material", "Material2"),
+    ("inclusion_shape", "cylinder"),
+    ("aspect_ratio", 10.0),
+    ("phase_definition", "by_size_and_diameter"),
+    ("inclusion_diameter", INCLUSION_DIAMETER),
+    ("inclusion_size", INCLUSION_SIZE),
+    ("size_distribution", "fixed"),
+    ("orientation", "fixed"),
+    ("theta_angle", 90.0),
+    ("phi_angle", 0.0),
+    ("coated", "no"),
+    ("interface_behavior", "perfectly_bonded"),
+    ("clustering", "no"),
+    ("allow_size_reduction", "no"),
+    ("track_percolation_onset", "no"),
+    ("stop_at_percolation", "no"),
+    ("check_final_percolation", "no"),
+    ("no_tie_on_fiber_tips", "no"),
+    ("custom_position_usage", "sequential"),
+    ("custom_position_ignore_phase_fraction", "on"),
+    ("custom_position_disable_geom_check", "on"),
+]
+
+MICROSTRUCTURE_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Microstructure1"),
+    ("phase", "Phase1"),
+    ("phase", "Phase2"),
+]
+
+LOADING_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Mechanical"),
+    ("type", "strain"),
+    ("boundary_conditions", "periodic"),
+    ("custom_bc", "no"),
+    ("load", "uniaxial_1"),
+    ("initial_strain", 0.0),
+    ("peak_strain", 3.0e-2),
+    ("history", "monotonic"),
+    ("quasi_static", "on"),
+    ("theta_load", 90.0),
+    ("phi_load", 0.0),
+    ("required_components", "E1_E2_E3_G12_G23_G13_CTE123_"),
+]
+
+TEMPERATURE_LOADING_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Temperature"),
+    ("type", "temperature"),
+    ("initial_temperature", 0.0),
+    ("peak_temperature", 1.0),
+    ("history", "monotonic"),
+    ("temperature_load_application", "concurrent"),
+]
+
+RVE_PARAMS: list[tuple[str, float | str]] = [
+    ("type", "classical"),
+    ("microstructure", "Microstructure1"),
+]
+
+MESH_PARAMS: list[tuple[str, float | str]] = [
+    ("mesh_type", "conforming"),
+    ("automatic_mesh_sizing", "off"),
+    ("element_size", ELEMENT_SIZE),
+    ("minimum_element_size", MINIMUM_ELEMENT_SIZE),
+    ("use_quadratic_elements", "off"),
+    ("use_quadratic_geometric_elements", "off"),
+    ("element_shape", "quad_dominated"),
+    ("internal_coarsening", "on"),
+    ("curvature_control", "on"),
+    ("chordal_deviation_ratio", 1.0e-1),
+    ("nb_refinement_steps", 5),
+    ("model_layer_interfaces", "off"),
+    ("seed_size", 5.0),
+    ("share_nodes", "off"),
+    ("periodic_mesh", "off"),
+    ("cohesive_element_size_ratio", 2.0e-1),
+]
+
+ANALYSISFE_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Analysis1"),
+    ("type", "thermo_mechanical"),
+    ("loading_name", "Mechanical,Temperature"),
+    ("final_time", 1.0),
+    ("max_time_inc", 1.0),
+    ("min_time_inc", 1.0e-1),
+    ("finite_strain", "off"),
+    ("initial_time_inc", 1.0),
+    ("max_number_increment", 2),
+    ("rve_size_definition", "user_defined"),
+    ("rve_dimension", "3d"),
+    ("size_rve", RVE_SIZE),
+    ("periodic", "yes"),
+    ("generation_sequence", "proportional"),
+    ("generate_matrix", "no"),
+    ("track_global_percolation_onset", "no"),
+    ("stop_at_global_percolation", "no"),
+    ("check_final_global_percolation", "no"),
+    ("random_seed_type", "automatic"),
+    ("random_seed", -75161927),
+    ("fe_solver", "Abaqus/INP"),
+    ("unsymmetric_solver", "no"),
+    ("default_timestepping", "yes"),
+    ("nb_cpus", 8),
+    ("fe_solver_type", "iterative"),
+    ("fe_field_output_frequency", 1),
+    ("use_output_time_points", "yes"),
+]
+
+GLOBAL_SETTINGS_PARAMS: list[tuple[str, float | str]] = [
+    ("allow_interpenetration", "no"),
+    ("allow_coating_interpenetration", "no"),
+    ("allow_rim_interpenetration", "no"),
+    ("use_median_plane_interpenetration", "no"),
+    ("cubic_architecture", "no"),
+    ("apply_perturbation", "no"),
+    ("favor_orientation_over_fraction", "no"),
+    ("minimum_relative_distance_wrt_diameter", 5.0e-2),
+    ("minimum_relative_vol", 5.0e-2),
+    ("max_number_of_tests", 2000),
+    ("OT_norm_tol", 1.0e-1),
+    ("max_number_of_geometry_attempts", 10),
+    ("minimum_rel_dist_incl_to_face", 0.0),
+    ("maximum_interpenetration_amount", 1.0),
+    ("random_fiber_perturbation_no_transverse_perturbation", "no"),
+    ("default_geometric_options", "yes"),
+    ("remove_unconnected_matrix_regions", "no"),
+]
+
+
+# ============================== Internals ==============================
 SECTION_MARKER = "##########################################"
 
 
-@dataclass(frozen=True)
-class DAFParameters:
-    material_density: float = 1.0
-    material2_density: float | None = None
-    young_modulus: float = 1.0
-    poisson_ratio: float = 0.25
-    phase2_diameter: float = 5.0
-    phase2_size: float = 50.0
-    element_size: float = 2.0
-    minimum_element_size: float = 0.25
-
-    @property
-    def resolved_material2_density(self) -> float:
-        return self.material_density if self.material2_density is None else self.material2_density
-
-
-def _format_float(value: float) -> str:
-    return f"{float(value):.15e}"
+def _format_value(value: float | str) -> str:
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return f"{float(value):.15e}"
+    return str(value)
 
 
 def _read_table(path: Path, min_cols: int) -> list[list[float]]:
@@ -58,96 +245,62 @@ def _resolve_input_file(input_dir: Path, name_candidates: Sequence[str]) -> Path
     raise FileNotFoundError(f"Cannot find any input file. Tried: {tried}")
 
 
-def _find_line(lines: Sequence[str], exact_text: str) -> int:
-    for idx, line in enumerate(lines):
-        if line.strip() == exact_text:
-            return idx
-    raise ValueError(f"Line not found: {exact_text}")
+def _render_section(section_name: str, params: Sequence[tuple[str, float | str]]) -> list[str]:
+    lines: list[str] = [SECTION_MARKER, section_name]
+    for key, value in params:
+        lines.append(f"{key} = {_format_value(value)}")
+    lines.append("")
+    return lines
 
 
-def _find_next_section(lines: Sequence[str], start_idx: int) -> int:
-    for idx in range(start_idx, len(lines)):
-        if lines[idx].strip() == SECTION_MARKER:
-            return idx
-    return len(lines)
-
-
-def _replace_key_in_block(lines: list[str], key: str, value: float, block_start: int, block_end: int) -> None:
-    key_prefix = f"{key} ="
-    for idx in range(block_start, block_end):
-        if lines[idx].strip().startswith(key_prefix):
-            lines[idx] = f"{key} = {_format_float(value)}"
-            return
-    raise ValueError(f"Cannot find key '{key}' in block {block_start}:{block_end}")
-
-
-def _replace_custom_lines(lines: list[str], positions: list[list[float]], angles: list[list[float]]) -> None:
-    anchor = _find_line(lines, "custom_position_disable_geom_check = on")
-    start = anchor + 1
-    end = _find_next_section(lines, start)
-
+def _render_phase2_with_custom(positions: list[list[float]], angles: list[list[float]]) -> list[str]:
     if len(positions) != len(angles):
         raise ValueError(
             f"Point/orientation count mismatch: {len(positions)} points vs {len(angles)} angles."
         )
 
-    new_lines: list[str] = []
+    lines = _render_section("PHASE", PHASE2_FIXED_PARAMS)
+    lines.pop()  # remove trailing blank, append custom lines first
+
     for row in positions:
         if len(row) < 3:
             raise ValueError("Point rows must contain at least 3 columns.")
-        new_lines.append(
+        lines.append(
             "custom_position = "
-            f"{_format_float(row[0])} ; {_format_float(row[1])} ; {_format_float(row[2])}"
+            f"{_format_value(row[0])} ; {_format_value(row[1])} ; {_format_value(row[2])}"
         )
 
     for row in angles:
         if len(row) < 2:
             raise ValueError("Angle rows must contain at least 2 columns.")
-        # custom_orientation first two columns use angle col2, col1 (swap)
-        new_lines.append(
+        lines.append(
             "custom_orientation = "
-            f"{_format_float(row[1])} ; {_format_float(row[0])} ; {_format_float(0.0)}"
+            f"{_format_value(row[1])} ; {_format_value(row[0])} ; {_format_value(0.0)}"
         )
 
-    lines[start:end] = new_lines + [""]
+    lines.append("")
+    return lines
 
 
-def _update_template_content(template_text: str, params: DAFParameters, positions: list[list[float]], angles: list[list[float]]) -> str:
-    lines = template_text.splitlines()
-
-    material1_name_idx = _find_line(lines, "name = Material1")
-    material1_end = _find_next_section(lines, material1_name_idx + 1)
-    _replace_key_in_block(lines, "density", params.material_density, material1_name_idx, material1_end)
-    _replace_key_in_block(lines, "Young", params.young_modulus, material1_name_idx, material1_end)
-    _replace_key_in_block(lines, "Poisson", params.poisson_ratio, material1_name_idx, material1_end)
-
-    material2_name_idx = _find_line(lines, "name = Material2")
-    material2_end = _find_next_section(lines, material2_name_idx + 1)
-    _replace_key_in_block(lines, "density", params.resolved_material2_density, material2_name_idx, material2_end)
-
-    phase2_name_idx = _find_line(lines, "name = Phase2")
-    phase2_end = _find_next_section(lines, phase2_name_idx + 1)
-    _replace_key_in_block(lines, "inclusion_diameter", params.phase2_diameter, phase2_name_idx, phase2_end)
-    _replace_key_in_block(lines, "inclusion_size", params.phase2_size, phase2_name_idx, phase2_end)
-
-    mesh_idx = _find_line(lines, "MESH")
-    mesh_end = _find_next_section(lines, mesh_idx + 1)
-    _replace_key_in_block(lines, "element_size", params.element_size, mesh_idx, mesh_end)
-    _replace_key_in_block(lines, "minimum_element_size", params.minimum_element_size, mesh_idx, mesh_end)
-
-    _replace_custom_lines(lines, positions, angles)
-    return "\n".join(lines) + "\n"
+def _build_daf_text(positions: list[list[float]], angles: list[list[float]]) -> str:
+    lines: list[str] = []
+    lines += _render_section("MATERIAL", MATERIAL1_PARAMS)
+    lines += _render_section("MATERIAL", MATERIAL2_PARAMS)
+    lines += _render_section("PHASE", PHASE1_PARAMS)
+    lines += _render_phase2_with_custom(positions, angles)
+    lines += _render_section("MICROSTRUCTURE", MICROSTRUCTURE_PARAMS)
+    lines += _render_section("LOADING", LOADING_PARAMS)
+    lines += _render_section("LOADING", TEMPERATURE_LOADING_PARAMS)
+    lines += _render_section("RVE", RVE_PARAMS)
+    lines += _render_section("MESH", MESH_PARAMS)
+    lines += _render_section("ANALYSISFE", ANALYSISFE_PARAMS)
+    lines += _render_section("GLOBAL_SETTINGS", GLOBAL_SETTINGS_PARAMS)
+    return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_analysis_file(
-    index: int,
-    input_dir: Path,
-    output_dir: Path,
-    template_path: Path,
-    params: DAFParameters,
-) -> Path:
+def generate_one_daf(index: int = INDEX) -> Path:
     angle_path = _resolve_input_file(
-        input_dir,
+        INPUT_DIR,
         (
             f"angles_a{index}.txt",
             f"angles_a{index}",
@@ -156,7 +309,7 @@ def generate_analysis_file(
         ),
     )
     point_path = _resolve_input_file(
-        input_dir,
+        INPUT_DIR,
         (
             f"points_a{index}.txt",
             f"points_a{index}",
@@ -167,74 +320,15 @@ def generate_analysis_file(
 
     positions = _read_table(point_path, min_cols=3)
     angles = _read_table(angle_path, min_cols=2)
+    output_text = _build_daf_text(positions, angles)
 
-    template_text = template_path.read_text(encoding="utf-8")
-    output_text = _update_template_content(template_text, params, positions, angles)
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"Analysis_a{index}.daf"
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = OUTPUT_DIR / f"Analysis_a{index}.daf"
     output_path.write_text(output_text, encoding="utf-8")
     return output_path
 
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Generate one Digimat-FE thermo-mechanical Analysis_a{x}.daf from one point/angle file pair."
-    )
-    parser.add_argument(
-        "--index",
-        type=int,
-        required=True,
-        help="Index x for one input pair: angles_a{x} + point(s)_a{x}.",
-    )
-    parser.add_argument("--input-dir", type=Path, default=Path("point_angle_files"))
-    parser.add_argument("--output-dir", type=Path, default=Path("digimatFE_analysis"))
-    parser.add_argument(
-        "--template",
-        type=Path,
-        default=Path("digimatFE_analysis/Analysis_a0.daf"),
-        help="Thermo-mechanical DAF template (default: Analysis_a0.daf).",
-    )
-
-    parser.add_argument("--material-density", type=float, default=1.0)
-    parser.add_argument(
-        "--material2-density",
-        type=float,
-        default=None,
-        help="Material2 density; defaults to material-density if omitted.",
-    )
-    parser.add_argument("--young-modulus", type=float, default=1.0)
-    parser.add_argument("--poisson-ratio", type=float, default=0.25)
-    parser.add_argument("--phase2-diameter", type=float, default=5.0)
-    parser.add_argument("--phase2-size", type=float, default=50.0)
-    parser.add_argument("--element-size", type=float, default=2.0)
-    parser.add_argument("--minimum-element-size", type=float, default=0.25)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = _parse_args()
-    params = DAFParameters(
-        material_density=args.material_density,
-        material2_density=args.material2_density,
-        young_modulus=args.young_modulus,
-        poisson_ratio=args.poisson_ratio,
-        phase2_diameter=args.phase2_diameter,
-        phase2_size=args.phase2_size,
-        element_size=args.element_size,
-        minimum_element_size=args.minimum_element_size,
-    )
-    output_path = generate_analysis_file(
-        index=args.index,
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
-        template_path=args.template,
-        params=params,
-    )
-
-    print("Generated file:")
-    print(output_path)
-
-
 if __name__ == "__main__":
-    main()
+    generated_path = generate_one_daf()
+    print("Generated file:")
+    print(generated_path)

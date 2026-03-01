@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 from typing import Sequence
 
 
+# ============================= User Config =============================
+INDEX = 0
+INPUT_DIR = Path("digimatFE_analysis")
+OUTPUT_DIR: Path | None = None
+
+
 def _format_float(value: float) -> str:
-    return f"{float(value):.15e}"
+    return f"{float(value):.4e}"
 
 
 def _parse_numeric_line(line: str) -> list[float]:
@@ -82,27 +87,11 @@ def extract_and_save(
     return stiffness_path, cte_path
 
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Extract Stiffness Matrix and Thermal Expansion from Digimat-FE .eng file."
-    )
-    parser.add_argument("--index", type=int, required=True, help="Index x for Analysis_a{x}.eng.")
-    parser.add_argument("--input-dir", type=Path, default=Path("digimatFE_analysis"))
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=None,
-        help="Output directory. Defaults to input-dir.",
-    )
-    return parser.parse_args()
-
-
 def main() -> None:
-    args = _parse_args()
     stiffness_path, cte_path = extract_and_save(
-        index=args.index,
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
+        index=INDEX,
+        input_dir=INPUT_DIR,
+        output_dir=OUTPUT_DIR,
     )
     print("Saved:")
     print(stiffness_path)

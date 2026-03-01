@@ -1,4 +1,3 @@
-import argparse
 import time
 from pathlib import Path
 
@@ -13,27 +12,14 @@ ORI_2_AY = [
     np.array([[0.40, 0.069, 0.26], [0.069, 0.17, -0.001], [0.26, -0.001, 0.43]]),
     np.array([[0.19, 0.028, 0.00], [0.028, 0.81, 0.0], [0.0, 0.0, 0.0]]), ]
 
+
+# ============================= User Config =============================
+ORI_ID = 2
+RANDOM_SEED = None
+MAX_ITERATIONS = int(1e4)
+LOG_INTERVAL = 50
+OUTPUT_TAG = None
 OUTPUT_DIR = Path("point_angle_files")
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Fiber orientation decomposition in periodic RVE.")
-    parser.add_argument(
-        "--ori-id",
-        type=int,
-        choices=[0, 1, 2],
-        default=2,
-        help="Index for ORI_2_AY[id], valid values: 0, 1, 2.",
-    )
-    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible initialization.")
-    parser.add_argument("--max-iter", type=int, default=int(1e4), help="Maximum iteration count for packing loop.")
-    parser.add_argument("--log-interval", type=int, default=50, help="Iteration logging interval. Use 0 to disable.")
-    parser.add_argument(
-        "--output-tag",
-        default=None,
-        help="Output filename tag. If omitted, uses a{ori_id+1}.",
-    )
-    return parser.parse_args()
 
 
 def _resolve_output_tag(output_tag, output_dir):
@@ -166,11 +152,10 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
 
 
 if __name__ == "__main__":
-    args = parse_args()
     run(
-        ori_id=args.ori_id,
-        random_seed=args.seed,
-        max_iterations=args.max_iter,
-        log_interval=args.log_interval,
-        output_tag=args.output_tag,
+        ori_id=ORI_ID,
+        random_seed=RANDOM_SEED,
+        max_iterations=MAX_ITERATIONS,
+        log_interval=LOG_INTERVAL,
+        output_tag=OUTPUT_TAG,
     )

@@ -3,32 +3,34 @@ from abaqusConstants import *
 from driverUtils import executeOnCaeStartup
 import glob
 import os
-
 import numpy as np
 
 executeOnCaeStartup()
 
+
+# ============================= User Config =============================
+PROJECT_ROOT = r"D:\github\fiber_orientation_decomposition"
+INPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
+
+
 def discover_input_sets():
     datasets = []
 
-    PROJECT_ROOT = r"D:\github\fiber_orientation_decomposition"  # <- 改成你的主目录（包含 point_angle_files 和 rve_abaqus）
-    input_dir = os.path.join(PROJECT_ROOT, "point_angle_files")
+    if not os.path.isdir(INPUT_DIR):
+        raise ValueError("Required folder not found: %s" % INPUT_DIR)
 
-    if not os.path.isdir(input_dir):
-        raise ValueError("Required folder not found: %s" % input_dir)
-
-    points_pattern = os.path.join(input_dir, "peri_points_*.txt")
+    points_pattern = os.path.join(INPUT_DIR, "peri_points_*.txt")
     for points_path in sorted(glob.glob(points_pattern)):
         base = os.path.basename(points_path)
         tag = base[len("peri_points_"):-4]
-        angles_path = os.path.join(input_dir, "peri_angles_%s.txt" % tag)
+        angles_path = os.path.join(INPUT_DIR, "peri_angles_%s.txt" % tag)
         if os.path.isfile(angles_path):
             datasets.append((tag, points_path, angles_path))
 
     if not datasets:
         raise ValueError(
             "No dataset found in: %s. Expected peri_points_*.txt + peri_angles_*.txt pairs."
-            % input_dir
+            % INPUT_DIR
         )
     return datasets
 

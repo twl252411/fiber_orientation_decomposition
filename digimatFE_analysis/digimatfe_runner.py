@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-import argparse
 import subprocess
 from pathlib import Path
-from typing import Iterable
 
 
 DEFAULT_DIGIMAT_BAT = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatFE\exec\DigimatFE.bat")
+
+# ============================= User Config =============================
+# Run only one DAF file each time.
+INDEX = 0
+ANALYSIS_DIR = Path("digimatFE_analysis")
+DIGIMAT_BAT = DEFAULT_DIGIMAT_BAT
+USE_RUN_FE_WORKFLOW_FLAG = True
+FALLBACK_WITHOUT_RUN_FE_WORKFLOW_FLAG = True
+TIMEOUT_SECONDS: float | None = None
+DRY_RUN = False
 
 
 def build_digimat_command(
@@ -98,71 +106,16 @@ def run_digimat_by_index(
     )
 
 
-def run_digimat_many(
-    indices: Iterable[int],
-    analysis_dir: Path = Path("digimatFE_analysis"),
-    digimat_bat: Path = DEFAULT_DIGIMAT_BAT,
-    use_run_fe_workflow_flag: bool = True,
-    fallback_without_run_fe_workflow_flag: bool = True,
-    timeout: float | None = None,
-    dry_run: bool = False,
-) -> None:
-    for idx in indices:
-        print(f"\n=== Running Analysis_a{idx}.daf ===")
-        run_digimat_by_index(
-            index=idx,
-            analysis_dir=analysis_dir,
-            digimat_bat=digimat_bat,
-            use_run_fe_workflow_flag=use_run_fe_workflow_flag,
-            fallback_without_run_fe_workflow_flag=fallback_without_run_fe_workflow_flag,
-            timeout=timeout,
-            dry_run=dry_run,
-        )
-
-
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run Digimat-FE .daf analyses with DigimatFE.bat."
-    )
-    parser.add_argument(
-        "--indices",
-        type=int,
-        nargs="+",
-        required=True,
-        help="Indices x for Analysis_a{x}.daf (for example: --indices 0 1 2).",
-    )
-    parser.add_argument("--analysis-dir", type=Path, default=Path("digimatFE_analysis"))
-    parser.add_argument("--digimat-bat", type=Path, default=DEFAULT_DIGIMAT_BAT)
-    parser.add_argument(
-        "--no-runfe-flag",
-        action="store_true",
-        help="Do not pass -runFEWorkflow.",
-    )
-    parser.add_argument(
-        "--no-fallback",
-        action="store_true",
-        help="Disable retry without -runFEWorkflow.",
-    )
-    parser.add_argument(
-        "--timeout",
-        type=float,
-        default=None,
-        help="Timeout in seconds for each run.",
-    )
-    parser.add_argument("--dry-run", action="store_true", help="Print command only.")
-    return parser.parse_args()
-
-
 def main() -> None:
-    args = _parse_args()
-    run_digimat_many(
-        indices=args.indices,
-        analysis_dir=args.analysis_dir,
-        digimat_bat=args.digimat_bat,
-        use_run_fe_workflow_flag=not args.no_runfe_flag,
-        fallback_without_run_fe_workflow_flag=not args.no_fallback,
-        timeout=args.timeout,
-        dry_run=args.dry_run,
+    print(f"=== Running Analysis_a{INDEX}.daf ===")
+    run_digimat_by_index(
+        index=INDEX,
+        analysis_dir=ANALYSIS_DIR,
+        digimat_bat=DIGIMAT_BAT,
+        use_run_fe_workflow_flag=USE_RUN_FE_WORKFLOW_FLAG,
+        fallback_without_run_fe_workflow_flag=FALLBACK_WITHOUT_RUN_FE_WORKFLOW_FLAG,
+        timeout=TIMEOUT_SECONDS,
+        dry_run=DRY_RUN,
     )
 
 
