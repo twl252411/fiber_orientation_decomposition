@@ -9,7 +9,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # ============================= User Config =============================
 # Run only one DAF file each time.
-INDEX = 1
+INDEX = "a1"
+ANALYSIS_TYPE = ["tm", "etc"][0]
+DAF_FILE = f"Analysis_{INDEX}_{ANALYSIS_TYPE}.daf"
+TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
+JAB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
+
 ANALYSIS_DIR = SCRIPT_DIR
 DIGIMAT_BAT = DEFAULT_DIGIMAT_BAT
 USE_RUN_FE_WORKFLOW_FLAG = True
@@ -110,15 +115,15 @@ def run_digimat_by_index(
     else:
         analysis_dir = analysis_dir.resolve()
 
-    daf_path = (analysis_dir / f"Analysis_a{index}.daf").resolve()
-    tmp_dir = analysis_dir / f"tmp_a{index}"
+    daf_path = (analysis_dir / DAF_FILE).resolve()
+    tmp_dir = analysis_dir / TMP_DIR
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     return run_digimat_daf(
         daf_path=daf_path,
         digimat_bat=digimat_bat,
         working_dir=tmp_dir,
-        job_name=f"Analysis_a{index}",
+        job_name=JAB_NAME,
         use_run_fe_workflow_flag=use_run_fe_workflow_flag,
         fallback_without_run_fe_workflow_flag=fallback_without_run_fe_workflow_flag,
         timeout=timeout,
@@ -127,7 +132,7 @@ def run_digimat_by_index(
 
 
 def main() -> None:
-    print(f"=== Running Analysis_a{INDEX}.daf ===")
+    print(f"=== Running Analysis.daf ===")
     run_digimat_by_index(
         index=INDEX,
         analysis_dir=ANALYSIS_DIR,

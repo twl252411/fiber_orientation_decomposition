@@ -2,28 +2,37 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
-import os
 
 
 # ============================= User Config =============================
-INDEX = 1
+COMPO_ID = 0
+INDEX = "a3"
+ANALYSIS_TPYE = ["tm", "etc"][0]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-INPUT_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, "digimat_analysis")
+INPUT_DIR = PROJECT_ROOT / "point_angle_files"
+OUTPUT_DIR = PROJECT_ROOT / "digimatFE_analysis"
+POINT_FILE = f"points_{INDEX}.txt"
+ANGLE_FILE = f"angles_{INDEX}.txt"
+ANALYSIS_NAME = f"Analysis_{INDEX}_{ANALYSIS_TPYE}.daf"
 
 # Material1 (isotropic): adjustable
-M1_YOUNG = 0.0448
-M1_POISSON = 0.35
-M1_THERMAL_EXPANSION = 2.6E-5
+M1_YOUNG = [0.0448, 0.003][COMPO_ID]
+M1_POISSON = [0.35, 0.35][COMPO_ID]
+M1_THERMAL_EXPANSION = [2.6E-5, 7.0E-5,][COMPO_ID]
+M1_THERMAL_CONDUCTIVITY = 0.22
+M1_SPECIFIC_HEAT_CAPACITY = 1.0
 
 # Material2 (transversely isotropic): 7 adjustable parameters
-M2_AXIAL_YOUNG = 0.23313
-M2_INPLANE_YOUNG = 0.02311
-M2_INPLANE_POISSON = 0.404
-M2_TRANSVERSE_POISSON = 0.20
-M2_TRANSVERSE_SHEAR = 0.0897
-M2_AXIAL_CTE = -2.4E-6
-M2_INPLANE_CTE = 6.4E-6
+M2_AXIAL_YOUNG = [0.23313, 0.172][COMPO_ID]
+M2_INPLANE_YOUNG = [0.02311, 0.172][COMPO_ID]
+M2_INPLANE_POISSON = [0.404, 0.20][COMPO_ID]
+M2_TRANSVERSE_POISSON = [0.20, 0.20][COMPO_ID]
+M2_TRANSVERSE_SHEAR = [0.0897, 0.07167][COMPO_ID]
+M2_AXIAL_CTE = [-2.4E-6, 1.0E-6][COMPO_ID]
+M2_INPLANE_CTE = [6.4E-6, 1.0E-6][COMPO_ID]
+M2_AXIAL_THERMAL_CONDUCTIVITY = 8.8
+M2_TRANSVERSE_THERMAL_CONDUCTIVITY = 2.0
+M2_SPECIFIC_HEAT_CAPACITY = 1.0
 
 # Phase2 / mesh / rve: adjustable
 PHASE2_VOLUME_FRACTION = 0.15
@@ -40,7 +49,7 @@ REFERENCE_TEMPERATURE = 0.0
 PHASE1_VOLUME_FRACTION = 1.0 - PHASE2_VOLUME_FRACTION
 
 
-MATERIAL1_PARAMS: list[tuple[str, float | str]] = [
+TM_MATERIAL1_PARAMS: list[tuple[str, float | str]] = [
     ("name", "Material1"),
     ("type", "elastic"),
     ("density", MATERIAL1_DENSITY),
@@ -51,7 +60,7 @@ MATERIAL1_PARAMS: list[tuple[str, float | str]] = [
     ("reference_temperature", REFERENCE_TEMPERATURE),
 ]
 
-MATERIAL2_PARAMS: list[tuple[str, float | str]] = [
+TM_MATERIAL2_PARAMS: list[tuple[str, float | str]] = [
     ("name", "Material2"),
     ("type", "elastic"),
     ("density", MATERIAL2_DENSITY),
@@ -64,6 +73,27 @@ MATERIAL2_PARAMS: list[tuple[str, float | str]] = [
     ("axial_CTE", M2_AXIAL_CTE),
     ("inPlane_CTE", M2_INPLANE_CTE),
     ("reference_temperature", REFERENCE_TEMPERATURE),
+]
+
+ETC_MATERIAL1_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Material1"),
+    ("type", "linear_fourier"),
+    ("density", MATERIAL1_DENSITY),
+    ("consistent_tangent", "on"),
+    ("thermal_model", "isotropic"),
+    ("thermal_conductivity", M1_THERMAL_CONDUCTIVITY),
+    ("specific_heat_capacity", M1_SPECIFIC_HEAT_CAPACITY),
+]
+
+ETC_MATERIAL2_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Material2"),
+    ("type", "linear_fourier"),
+    ("density", MATERIAL2_DENSITY),
+    ("consistent_tangent", "on"),
+    ("thermal_model", "transversely_isotropic"),
+    ("specific_heat_capacity", M2_SPECIFIC_HEAT_CAPACITY),
+    ("axial_thermal_conductivity", M2_AXIAL_THERMAL_CONDUCTIVITY),
+    ("transverse_thermal_conductivity", M2_TRANSVERSE_THERMAL_CONDUCTIVITY),
 ]
 
 # ------------------------------- Phases -------------------------------
@@ -107,7 +137,7 @@ MICROSTRUCTURE_PARAMS: list[tuple[str, float | str]] = [
     ("phase", "Phase2"),
 ]
 
-LOADING_PARAMS: list[tuple[str, float | str]] = [
+TM_LOADING_PARAMS: list[tuple[str, float | str]] = [
     ("name", "Mechanical"),
     ("type", "strain"),
     ("boundary_conditions", "periodic"),
@@ -122,13 +152,26 @@ LOADING_PARAMS: list[tuple[str, float | str]] = [
     ("required_components", "E1_E2_E3_G12_G23_G13_CTE123_"),
 ]
 
-TEMPERATURE_LOADING_PARAMS: list[tuple[str, float | str]] = [
+TM_TEMPERATURE_LOADING_PARAMS: list[tuple[str, float | str]] = [
     ("name", "Temperature"),
     ("type", "temperature"),
     ("initial_temperature", 0.0),
     ("peak_temperature", 1.0),
     ("history", "monotonic"),
     ("temperature_load_application", "concurrent"),
+]
+
+ETC_LOADING_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Temperature_gradient"),
+    ("type", "temperature_gradient"),
+    ("boundary_conditions", "periodic"),
+    ("load", "uniaxial_1"),
+    ("initial_gradient", 0.0),
+    ("peak_gradient", 1.0),
+    ("history", "monotonic"),
+    ("theta_load", 90.0),
+    ("phi_load", 0.0),
+    ("required_components", "K11_K22_K33_"),
 ]
 
 RVE_PARAMS: list[tuple[str, float | str]] = [
@@ -155,10 +198,40 @@ MESH_PARAMS: list[tuple[str, float | str]] = [
     ("cohesive_element_size_ratio", 2.0e-1),
 ]
 
-ANALYSISFE_PARAMS: list[tuple[str, float | str]] = [
+TM_ANALYSISFE_PARAMS: list[tuple[str, float | str]] = [
     ("name", "Analysis1"),
     ("type", "thermo_mechanical"),
     ("loading_name", "Mechanical,Temperature"),
+    ("final_time", 1.0),
+    ("max_time_inc", 1.0),
+    ("min_time_inc", 1.0e-1),
+    ("finite_strain", "off"),
+    ("initial_time_inc", 1.0),
+    ("max_number_increment", 2),
+    ("rve_size_definition", "user_defined"),
+    ("rve_dimension", "3d"),
+    ("size_rve", RVE_SIZE),
+    ("periodic", "yes"),
+    ("generation_sequence", "proportional"),
+    ("generate_matrix", "no"),
+    ("track_global_percolation_onset", "no"),
+    ("stop_at_global_percolation", "no"),
+    ("check_final_global_percolation", "no"),
+    ("random_seed_type", "automatic"),
+    ("random_seed", -75161927),
+    ("fe_solver", "Abaqus/INP"),
+    ("unsymmetric_solver", "no"),
+    ("default_timestepping", "yes"),
+    ("nb_cpus", 8),
+    ("fe_solver_type", "iterative"),
+    ("fe_field_output_frequency", 1),
+    ("use_output_time_points", "yes"),
+]
+
+ETC_ANALYSISFE_PARAMS: list[tuple[str, float | str]] = [
+    ("name", "Analysis1"),
+    ("type", "thermal_conductivity"),
+    ("loading_name", "Temperature_gradient"),
     ("final_time", 1.0),
     ("max_time_inc", 1.0),
     ("min_time_inc", 1.0e-1),
@@ -285,42 +358,61 @@ def _render_phase2_with_custom(positions: list[list[float]], angles: list[list[f
     return lines
 
 
-def _build_daf_text(positions: list[list[float]], angles: list[list[float]]) -> str:
+def _normalize_analysis_type(value: str) -> str:
+    analysis_type = str(value).strip().lower()
+    if analysis_type not in {"tm", "etc"}:
+        raise ValueError(f"Unsupported ANALYSIS_TPYE: {value}. Expected 'tm' or 'etc'.")
+    return analysis_type
+
+
+def _build_daf_text(positions: list[list[float]], angles: list[list[float]], analysis_type: str) -> str:
+    analysis_type = _normalize_analysis_type(analysis_type)
     lines: list[str] = []
-    lines += _render_section("MATERIAL", MATERIAL1_PARAMS)
-    lines += _render_section("MATERIAL", MATERIAL2_PARAMS)
+    if analysis_type == "tm":
+        lines += _render_section("MATERIAL", TM_MATERIAL1_PARAMS)
+        lines += _render_section("MATERIAL", TM_MATERIAL2_PARAMS)
+    else:
+        lines += _render_section("MATERIAL", ETC_MATERIAL1_PARAMS)
+        lines += _render_section("MATERIAL", ETC_MATERIAL2_PARAMS)
+
     lines += _render_section("PHASE", PHASE1_PARAMS)
     lines += _render_phase2_with_custom(positions, angles)
     lines += _render_section("MICROSTRUCTURE", MICROSTRUCTURE_PARAMS)
-    lines += _render_section("LOADING", LOADING_PARAMS)
-    lines += _render_section("LOADING", TEMPERATURE_LOADING_PARAMS)
+    if analysis_type == "tm":
+        lines += _render_section("LOADING", TM_LOADING_PARAMS)
+        lines += _render_section("LOADING", TM_TEMPERATURE_LOADING_PARAMS)
+    else:
+        lines += _render_section("LOADING", ETC_LOADING_PARAMS)
     lines += _render_section("RVE", RVE_PARAMS)
     lines += _render_section("MESH", MESH_PARAMS)
-    lines += _render_section("ANALYSISFE", ANALYSISFE_PARAMS)
+    if analysis_type == "tm":
+        lines += _render_section("ANALYSISFE", TM_ANALYSISFE_PARAMS)
+    else:
+        lines += _render_section("ANALYSISFE", ETC_ANALYSISFE_PARAMS)
     lines += _render_section("GLOBAL_SETTINGS", GLOBAL_SETTINGS_PARAMS)
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_one_daf(index: int = INDEX) -> Path:
+def generate_one_daf() -> Path:
+    analysis_type = _normalize_analysis_type(ANALYSIS_TPYE)
+
     angle_path = _resolve_input_file(
         INPUT_DIR,
-        (
-            f"angles_a{index}.txt",
-        ),
+        (ANGLE_FILE, ),
     )
     point_path = _resolve_input_file(
         INPUT_DIR,
-        (
-            f"points_a{index}.txt",
-        ),
+        (POINT_FILE, ),
     )
 
     positions = _read_table(point_path, min_cols=3)
     angles = _read_table(angle_path, min_cols=2)
-    output_text = _build_daf_text(positions, angles)
+    output_text = _build_daf_text(positions, angles, analysis_type=analysis_type)
 
-    Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-    output_path = Path(OUTPUT_DIR) / f"Analysis_a{index}.daf"
+    output_dir = Path(OUTPUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_name = ANALYSIS_NAME if ANALYSIS_NAME else f"Analysis_{INDEX}_{analysis_type}.daf"
+    output_path = output_dir / output_name
     output_path.write_text(output_text, encoding="utf-8")
     return output_path
 

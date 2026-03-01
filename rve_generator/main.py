@@ -1,25 +1,75 @@
 import time
 from pathlib import Path
 
+import os
 import numpy as np
 from pytransform3d import rotations
 from scipy.spatial import cKDTree
 from distance3d import colliders, mpr, periodic_image, reorientation
 
 
-ORI_2_AY = [
-    np.array([[0.58, 0.019, -0.015], [0.019, 0.17, -0.012], [-0.015, -0.012, 0.25]]),
-    np.array([[0.40, 0.069, 0.26], [0.069, 0.17, -0.001], [0.26, -0.001, 0.43]]),
-    np.array([[0.19, 0.028, 0.00], [0.028, 0.81, 0.0], [0.0, 0.0, 0.0]]), ]
+ORI_2_AY = [np.array([[0.58, 0.019, -0.015], [0.019, 0.17, -0.012], [-0.015, -0.012, 0.25]]),
+            np.array([[0.40, 0.069, 0.26], [0.069, 0.17, -0.001], [0.26, -0.001, 0.43]]),
+            np.array([[0.19, 0.028, 0.00], [0.028, 0.81, 0.0], [0.0, 0.0, 0.0]]), ]
 
+ORI_2_BASE = [np.diag([1.0, 0.0, 0.0]), np.diag([1/2, 1/2, 0.0]), np.diag([1/3, 1/3, 1/3]),
+              np.diag([2/3, 1/6, 1/6]), np.diag([3/4, 1/4, 0.0]), np.diag([5/12, 5/12, 1/6]), ]
 
 # ============================= User Config =============================
-ORI_ID = 2
+ORI_ID = "b6"
+ALPHA = 0.5
 RANDOM_SEED = None
 MAX_ITERATIONS = int(1e4)
 LOG_INTERVAL = 50
 OUTPUT_TAG = None
-OUTPUT_DIR = Path("point_angle_files")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "point_angle_files")
+
+
+def _build_ori_cases():
+    cases = []
+    for idx, tensor in enumerate(ORI_2_AY, start=1):
+        cases.append({"family": "a", "id": idx, "tag": f"a{idx}", "tensor": tensor})
+    for idx, tensor in enumerate(ORI_2_BASE, start=1):
+        cases.append({"family": "b", "id": idx, "tag": f"b{idx}", "tensor": tensor})
+    return cases
+
+
+ORI_CASES = _build_ori_cases()
+
+
+def _resolve_ori_case(ori_id):
+    if isinstance(ori_id, str):
+        key = ori_id.strip().lower()
+        for case in ORI_CASES:
+            if case["tag"] == key:
+                return case
+        raise ValueError(f"Unknown ori_id '{ori_id}'. Use one of {[c['tag'] for c in ORI_CASES]}.")
+
+    if isinstance(ori_id, (int, np.integer)):
+        idx = int(ori_id)
+        if 0 <= idx < len(ORI_CASES):
+            return ORI_CASES[idx]
+        raise ValueError(f"ori_id index out of range: {ori_id}. Valid range: 0..{len(ORI_CASES) - 1}.")
+
+    raise TypeError("ori_id must be a string tag like 'a1'/'b4' or an integer case index.")
+
+
+def _apply_angle_constraints(case, angles):
+    # BASE[0]: (0, 90deg, 0) for every inclusion.
+    if case["family"] == "b" and case["id"] == 1:
+        angles[:, 0] = 0.0
+        angles[:, 1] = np.pi / 2.0
+        angles[:, 2] = 0.0
+
+    # BASE[1], BASE[4], AY[2]: theta = 90deg.
+    if (
+        (case["family"] == "b" and case["id"] in (2, 5))
+        or (case["family"] == "a" and case["id"] == 3)
+    ):
+        angles[:, 1] = np.pi / 2.0
+
+    return angles
 
 
 def _resolve_output_tag(output_tag, output_dir):
@@ -41,16 +91,17 @@ def _log(iter_num, potential, log_interval, is_last=False):
         print(f"Iteration {iter_num}: Potential = {potential:.8f}")
 
 
-def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, output_tag=None):
+def run(ori_id="a1", random_seed=42, max_iterations=int(1e4), log_interval=50, output_tag=None):
     start_time = time.time()
     rng = np.random.default_rng(random_seed)
+    case = _resolve_ori_case(ori_id)
 
     # ========================== Parameters =============================
     rve_size = np.array([100.0, 100.0, 100.0], dtype=float)
     inc_size_base = np.array([5.0 / 2.0, 50.0], dtype=float)  # [radius, length]
     inc_vf = 0.15
     inc_enl = 1.05
-    inc_ori_tensor2 = ORI_2_AY[ori_id]
+    inc_ori_tensor2 = case["tensor"]
 
     inc_volume = np.pi * inc_size_base[0] ** 2 * inc_size_base[1]
     inc_num = int(np.prod(rve_size) * inc_vf / inc_volume) + 1
@@ -59,13 +110,14 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
     inv_rve_size = 1.0 / rve_size
 
     # Damping coefficients
-    alpha = 0.1
+    alpha = ALPHA
     beta = 1.0
     tolerance = inc_size[0] * 1.0e-4
 
     # ====================== centers and angles =========================
     points = rng.uniform([0.0, 0.0, 0.0], rve_size, size=(inc_num, 3))
     angles = rng.uniform([0.0, 0.0, 0.0], np.pi * np.array([2.0, 1.0, 1.0]), size=(inc_num, 3))
+    angles = _apply_angle_constraints(case, angles)
     inc_ori_vecs = np.column_stack(
         (np.sin(angles[:, 1]) * np.cos(angles[:, 0]),
          np.sin(angles[:, 1]) * np.sin(angles[:, 0]),
@@ -132,9 +184,9 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
     peri_points, peri_angles = periodic_image.generate_periodic_images(points, angles, rve_size, peri_shift)
 
     # =========================== Combine and save results ======================
-    output_dir = OUTPUT_DIR
+    output_dir = Path(OUTPUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_tag = _resolve_output_tag(f"a{ori_id + 1}" if output_tag is None else output_tag, output_dir)
+    output_tag = _resolve_output_tag(case["tag"] if output_tag is None else output_tag, output_dir)
 
     angles_deg = np.rad2deg(angles)
     peri_angles_deg = np.rad2deg(peri_angles)
@@ -146,7 +198,7 @@ def run(ori_id=0, random_seed=42, max_iterations=int(1e4), log_interval=50, outp
 
     print(f"Final iteration: {final_iteration}, potential: {final_potential:.8f}")
     print(f"Execution time: {time.time() - start_time:.6f} seconds")
-    print(f"Orientation tensor id: {ori_id}")
+    print(f"Orientation tensor: {case['tag']}")
     print(f"Output directory: {output_dir}")
     print(f"Output tag: {output_tag}")
 

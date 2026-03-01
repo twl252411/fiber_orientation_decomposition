@@ -6,11 +6,12 @@ import os
 
 
 # ============================= User Config =============================
-INDEX = 1
+INDEX = "a1"
+TMP_DIR = f"tmp_{INDEX}"
+JAB_NAME = f"Analysis_{INDEX}"
 PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
-TMP_DIR_PREFIX = "tmp_a"
 
 
 def _format_float(value: float) -> str:
@@ -75,7 +76,7 @@ def extract_and_save(
     output_dir: Path | None = None,
 ) -> tuple[Path, Path]:
 
-    eng_path = Path(input_dir) / f"{TMP_DIR_PREFIX}{index}" / f"Analysis_a{index}_Analysis1.eng"
+    eng_path = Path(input_dir) / TMP_DIR / f"{JAB_NAME}_Analysis1.eng"
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
 
