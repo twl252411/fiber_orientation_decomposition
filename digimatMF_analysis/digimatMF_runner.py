@@ -131,6 +131,26 @@ def _resolve_workflow_flag(digimat_exec: Path, workflow_flag: str | None) -> str
     return _default_workflow_flag(digimat_exec)
 
 
+def _candidate_launchers(primary_exec: Path) -> list[Path]:
+    parent = primary_exec.parent
+    candidates = [
+        primary_exec,
+        parent / "digimat.exe",
+        parent / "digimatDriver.exe",
+        parent / "DigimatMF.bat",
+    ]
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for p in candidates:
+        key = str(p).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if p.exists():
+            unique.append(p)
+    return unique
+
+
 def build_digimat_command(
     digimat_exec: Path,
     daf_path: Path,
@@ -211,49 +231,53 @@ def run_digimat_daf(
     if not dry_run and not digimat_exec.exists():
         raise FileNotFoundError(f"Digimat launcher not found: {digimat_exec}")
 
-    resolved_workflow_flag = _resolve_workflow_flag(digimat_exec, workflow_flag)
-    workflow_candidates: list[str | None] = [resolved_workflow_flag]
-    # Always try the opposite branch as fallback.
-    if resolved_workflow_flag is None:
-        workflow_candidates.append("-runMFWorkflow")
-    else:
-        workflow_candidates.append(None)
-    # de-duplicate while preserving order
-    dedup_workflow: list[str | None] = []
-    for wf in workflow_candidates:
-        if wf not in dedup_workflow:
-            dedup_workflow.append(wf)
-    workflow_candidates = dedup_workflow
+    launchers = _candidate_launchers(digimat_exec)
+    if not launchers:
+        raise FileNotFoundError(f"No Digimat launchers found near: {digimat_exec.parent}")
+
     env = _build_mf_env(
-        digimat_exec=digimat_exec,
+        digimat_exec=launchers[0],
         digimat_mf_bat=digimat_mf_bat,
         use_bootstrap=use_mf_env_bootstrap,
     )
-    exec_name = digimat_exec.name.lower()
-    if exec_name.endswith(".exe"):
-        arg_styles = ["kv", "dash_space", "dash_eq", "slash_space", "slash_eq"]
-    else:
-        arg_styles = ["kv"]
+    commands: list[tuple[Path, str, str | None, list[str]]] = []
+    for launcher in launchers:
+        resolved_workflow_flag = _resolve_workflow_flag(launcher, workflow_flag)
+        workflow_candidates: list[str | None] = [resolved_workflow_flag]
+        if resolved_workflow_flag is None:
+            workflow_candidates.append("-runMFWorkflow")
+        else:
+            workflow_candidates.append(None)
+        dedup_workflow: list[str | None] = []
+        for wf in workflow_candidates:
+            if wf not in dedup_workflow:
+                dedup_workflow.append(wf)
 
-    commands: list[tuple[str, str | None, list[str]]] = []
-    for wf in workflow_candidates:
-        for style in arg_styles:
-            commands.append(
-                (
-                    style,
-                    wf,
-                    build_digimat_command(
-                        digimat_exec=digimat_exec,
-                        daf_path=daf_path,
-                        working_dir=working_dir,
-                        job_name=job_name,
-                        workflow_flag=wf,
-                        arg_style=style,
-                    ),
+        exec_name = launcher.name.lower()
+        if exec_name.endswith(".exe"):
+            arg_styles = ["kv", "dash_space", "dash_eq", "slash_space", "slash_eq"]
+        else:
+            arg_styles = ["kv"]
+
+        for wf in dedup_workflow:
+            for style in arg_styles:
+                commands.append(
+                    (
+                        launcher,
+                        style,
+                        wf,
+                        build_digimat_command(
+                            digimat_exec=launcher,
+                            daf_path=daf_path,
+                            working_dir=working_dir,
+                            job_name=job_name,
+                            workflow_flag=wf,
+                            arg_style=style,
+                        ),
+                    )
                 )
-            )
 
-    print("Executing (attempt 1):", " ".join(commands[0][2]))
+    print("Executing (attempt 1):", " ".join(commands[0][3]))
     if dry_run:
         return None
 
@@ -266,11 +290,12 @@ def run_digimat_daf(
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
         failures: list[str] = []
 
-        for attempt_idx, (style, wf, cmd) in enumerate(commands, start=1):
+        for attempt_idx, (launcher, style, wf, cmd) in enumerate(commands, start=1):
             wf_tag = "nowf" if wf is None else wf.lstrip("-")
-            log_name = f"{job_name}.log" if attempt_idx == 1 else f"{job_name}.{wf_tag}.{style}.log"
+            exe_tag = launcher.stem
+            log_name = f"{job_name}.log" if attempt_idx == 1 else f"{job_name}.{exe_tag}.{wf_tag}.{style}.log"
             log_path = Path(working_dir) / log_name
-            print(f"Attempt {attempt_idx}/{len(commands)} ({wf_tag},{style}): {' '.join(cmd)}")
+            print(f"Attempt {attempt_idx}/{len(commands)} ({exe_tag},{wf_tag},{style}): {' '.join(cmd)}")
             log_file = log_path.open("w", encoding="utf-8")
             process = subprocess.Popen(
                 cmd,
@@ -293,7 +318,9 @@ def run_digimat_daf(
             preview = ""
             if log_path.exists():
                 preview = log_path.read_text(encoding="utf-8", errors="ignore")[:400].strip()
-            failures.append(f"{wf_tag}/{style}: rc={return_code}, log={log_path}, preview={preview if preview else '<empty>'}")
+            failures.append(
+                f"{exe_tag}/{wf_tag}/{style}: rc={return_code}, log={log_path}, preview={preview if preview else '<empty>'}"
+            )
 
         raise RuntimeError(
             "DigimatMF process exited immediately for all command variants. "
@@ -302,9 +329,10 @@ def run_digimat_daf(
 
     # Foreground mode: try command variants sequentially.
     last_exc: Exception | None = None
-    for attempt_idx, (style, wf, cmd) in enumerate(commands, start=1):
+    for attempt_idx, (launcher, style, wf, cmd) in enumerate(commands, start=1):
         wf_tag = "nowf" if wf is None else wf.lstrip("-")
-        print(f"Attempt {attempt_idx}/{len(commands)} ({wf_tag},{style}): {' '.join(cmd)}")
+        exe_tag = launcher.stem
+        print(f"Attempt {attempt_idx}/{len(commands)} ({exe_tag},{wf_tag},{style}): {' '.join(cmd)}")
         try:
             return subprocess.run(cmd, check=True, text=True, timeout=timeout, env=env)
         except Exception as exc:
