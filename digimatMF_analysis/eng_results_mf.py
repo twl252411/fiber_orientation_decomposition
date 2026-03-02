@@ -7,8 +7,9 @@ import os
 
 # ============================= User Config =============================
 INDEX = "a1"
-TMP_DIR = f"tmp_{INDEX}"
-JAB_NAME = f"Analysis_{INDEX}"
+ANALYSIS_TYPE = ["tm", "etc"][0]
+TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
+JAB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
 PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
@@ -76,7 +77,7 @@ def extract_and_save(
     output_dir: Path | None = None,
 ) -> tuple[Path, Path]:
 
-    eng_path = Path(input_dir) / TMP_DIR / f"{JAB_NAME}_Analysis1.eng"
+    eng_path = Path(input_dir) / TMP_DIR / f"{JAB_NAME}.eng"
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
 
@@ -84,8 +85,8 @@ def extract_and_save(
 
     out_dir = input_dir if output_dir is None else output_dir
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    stiffness_path = Path(out_dir) / f"Analysis_a{index}_Stiffness.txt"
-    cte_path = Path(out_dir) / f"Analysis_a{index}_CTE.txt"
+    stiffness_path = Path(out_dir) / f"{JAB_NAME}_Stiffness.txt"
+    cte_path = Path(out_dir) / f"{JAB_NAME}_CTE.txt"
 
     _write_csv_rows(stiffness_path, stiffness)
     _write_csv_rows(cte_path, cte)
