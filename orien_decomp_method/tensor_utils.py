@@ -222,6 +222,38 @@ def tensor_double_dot(T1: np.ndarray, T2: np.ndarray) -> np.ndarray:
 
 
 # ==================================================================================================================== #
+def tensor_cte(inp_tensor: np.ndarray) -> np.ndarray:
+    """
+    Convert a CTE vector/matrix to a symmetric 3x3 tensor.
+
+    Supported input forms:
+        - 3x3 matrix (returned as-is)
+        - length-6 vector in Voigt-like order [xx, yy, zz, xy, xz, yz]
+        - shape (1,6) or (6,1)
+    """
+    arr = np.asarray(inp_tensor, dtype=float)
+
+    if arr.shape == (3, 3):
+        return arr
+
+    flat = arr.reshape(-1)
+    if flat.size != 6:
+        raise ValueError(
+            f"CTE input must be (3,3) or length-6, got shape {arr.shape}."
+        )
+
+    xx, yy, zz, xy, xz, yz = flat
+    return np.array(
+        [
+            [xx, xy, xz],
+            [xy, yy, yz],
+            [xz, yz, zz],
+        ],
+        dtype=float,
+    )
+
+
+# ==================================================================================================================== #
 def tensor_identity() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate identity and projection 4th-order tensors for 3D elasticity.
@@ -261,6 +293,7 @@ __all__ = [
     "tensor_voigt",
     "tensor_inverse",
     "tensor_double_dot",
+    "tensor_cte",
     "tensor_identity",
 ]
 
@@ -285,6 +318,9 @@ tensor_inverse(inp_tensor)
 
 tensor_double_dot(T1, T2)
     Perform tensor double-dot operation between 4th×2nd or 4th×4th tensors.
+
+tensor_cte(inp_tensor)
+    Convert CTE in 6-component form or 3x3 form into a symmetric 3x3 tensor.
 
 tensor_identity()
     Generate 4th-order symmetric identity tensor and its volumetric/deviatoric projectors.

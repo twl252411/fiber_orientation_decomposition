@@ -116,29 +116,63 @@ def t6_shape_functions(l1, l2, l3):
     return N
 
 
-def t6_interpolate(p):
+def t6_bernstein_shape_functions(l1, l2, l3):
     """
-    Perform quadratic T6 interpolation at a given point.
+    Evaluate quadratic Bernstein basis on a triangle.
+
+    Compared with Lagrange T6 shape functions, Bernstein basis is non-negative
+    for points inside the triangle and forms a partition of unity.
+    """
+    B = np.empty(6)
+    B[0] = l1 * l1
+    B[1] = l2 * l2
+    B[2] = l3 * l3
+    B[3] = 2.0 * l1 * l2
+    B[4] = 2.0 * l2 * l3
+    B[5] = 2.0 * l3 * l1
+    return B
+
+
+def t6_interpolate(p, basis: str = "bernstein"):
+    """
+    Return six quadratic interpolation weights at a given point.
 
     Parameters
     ----------
     p : array_like, shape (2,)
         Coordinates of the interpolation point.
-    a, b, c : array_like, shape (2,)
-        Coordinates of the triangle vertices.
+    basis : {'bernstein', 'lagrange'}
+        - 'bernstein' (default): non-negative inside triangle
+        - 'lagrange': classical T6 FEM basis (may include negative weights)
 
     Returns
     -------
-    interpolated_value : ndarray or float
-        Interpolated value of the field at point p.
+    ndarray, shape (6,)
+        Interpolation weights corresponding to [A, B, C, AB_mid, BC_mid, CA_mid].
     """
     a = np.array([1.0, 0.0])
     b = np.array([0.5, 0.5])
     c = np.array([1/3, 1/3])
 
     l1, l2, l3 = barycentric_coords(p, a, b, c)
-    N = t6_shape_functions(l1, l2, l3)
-    return N
+    lmbd = np.array([l1, l2, l3], dtype=float)
+
+    if np.any(lmbd < -1e-12):
+        raise ValueError(f"Point {p} is outside reference triangle; barycentric={lmbd}")
+
+    if basis.lower() == "lagrange":
+        w = t6_shape_functions(l1, l2, l3)
+    elif basis.lower() == "bernstein":
+        w = t6_bernstein_shape_functions(l1, l2, l3)
+    else:
+        raise ValueError("basis must be 'bernstein' or 'lagrange'")
+
+    # Numerical safeguard to keep partition of unity robust.
+    w = np.asarray(w, dtype=float)
+    s = np.sum(w)
+    if not np.isclose(s, 1.0):
+        w = w / s
+    return w
 
 def piecewise_linear_interp(p):
     """
