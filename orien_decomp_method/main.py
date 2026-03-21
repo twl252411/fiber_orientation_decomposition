@@ -234,16 +234,34 @@ def _save_stiffness(index: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path)
     np.savetxt(out_dir / f"{base}_Stiffness_R.txt", tu.tensor_voigt(c_r), fmt="%.6e", delimiter=",")
 
 
+def _save_stiffness_eigen(index: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_tm"
+    np.savetxt(out_dir / f"{base}_Stiffness_Eigen_V.txt", tu.tensor_voigt(c_v), fmt="%.6e", delimiter=",")
+    np.savetxt(out_dir / f"{base}_Stiffness_Eigen_R.txt", tu.tensor_voigt(c_r), fmt="%.6e", delimiter=",")
+
+
 def _save_cte(index: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
     base = f"Analysis_{index}_tm"
     np.savetxt(out_dir / f"{base}_CTE_V.txt", alpha_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_CTE_R.txt", alpha_r, fmt="%.6e", delimiter=",")
 
 
+def _save_cte_eigen(index: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_tm"
+    np.savetxt(out_dir / f"{base}_CTE_Eigen_V.txt", alpha_v, fmt="%.6e", delimiter=",")
+    np.savetxt(out_dir / f"{base}_CTE_Eigen_R.txt", alpha_r, fmt="%.6e", delimiter=",")
+
+
 def _save_etc(index: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
     base = f"Analysis_{index}_etc"
     np.savetxt(out_dir / f"{base}_ETC_V.txt", k_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_ETC_R.txt", k_r, fmt="%.6e", delimiter=",")
+
+
+def _save_etc_eigen(index: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_etc"
+    np.savetxt(out_dir / f"{base}_ETC_Eigen_V.txt", k_v, fmt="%.6e", delimiter=",")
+    np.savetxt(out_dir / f"{base}_ETC_Eigen_R.txt", k_r, fmt="%.6e", delimiter=",")
 
 
 def _resolve_states(interp: str, indices: Sequence[str] | None) -> List[str]:
@@ -315,32 +333,40 @@ def _run_linear(
         cte_list = [state_tm[s][1] for s in lin_ids]
         beta_list = [tu.tensor_double_dot(c, a) for c, a in zip(stiff_list, cte_list)]
 
-        c_v = weighted_sum(weights, stiff_list)
-        beta_v = weighted_sum(weights, beta_list)
-        c_v = tu.tensor_eigen_trans(c_v, eig_vecs)
-        beta_v = tu.tensor_eigen_trans(beta_v, eig_vecs)
-        a_v = tu.tensor_double_dot(tu.tensor_inverse(c_v), beta_v)
+        c_v_eigen = weighted_sum(weights, stiff_list)
+        beta_v_eigen = weighted_sum(weights, beta_list)
+        a_v_eigen = tu.tensor_double_dot(tu.tensor_inverse(c_v_eigen), beta_v_eigen)
 
         s_list = [tu.tensor_inverse(c) for c in stiff_list]
-        s_r = weighted_sum(weights, s_list)
-        s_r = tu.tensor_eigen_trans(s_r, eig_vecs)
-        c_r = tu.tensor_inverse(s_r)
+        s_r_eigen = weighted_sum(weights, s_list)
+        c_r_eigen = tu.tensor_inverse(s_r_eigen)
 
-        a_r = weighted_sum(weights, cte_list)
-        a_r = tu.tensor_eigen_trans(a_r, eig_vecs)
+        a_r_eigen = weighted_sum(weights, cte_list)
+
+        c_v = tu.tensor_eigen_trans(c_v_eigen, eig_vecs)
+        beta_v = tu.tensor_eigen_trans(beta_v_eigen, eig_vecs)
+        a_v = tu.tensor_double_dot(tu.tensor_inverse(c_v), beta_v)
+        s_r = tu.tensor_eigen_trans(s_r_eigen, eig_vecs)
+        c_r = tu.tensor_inverse(s_r)
+        a_r = tu.tensor_eigen_trans(a_r_eigen, eig_vecs)
 
         if "elastic" in types:
             _save_stiffness(output_index, c_v, c_r, out_dir)
+            _save_stiffness_eigen(output_index, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
             _save_cte(output_index, a_v, a_r, out_dir)
+            _save_cte_eigen(output_index, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in lin_ids]
-        k_v = weighted_sum(weights, k_list)
-        k_v = tu.tensor_eigen_trans(k_v, eig_vecs)
-        k_r_inv = weighted_sum(weights, [np.linalg.inv(k) for k in k_list])
-        k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv, eig_vecs))
+        k_v_eigen = weighted_sum(weights, k_list)
+        k_r_inv_eigen = weighted_sum(weights, [np.linalg.inv(k) for k in k_list])
+        k_r_eigen = np.linalg.inv(k_r_inv_eigen)
+
+        k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
+        k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
         _save_etc(output_index, k_v, k_r, out_dir)
+        _save_etc_eigen(output_index, k_v_eigen, k_r_eigen, out_dir)
 
 
 def _run_quadratic(
@@ -365,32 +391,40 @@ def _run_quadratic(
         cte_list = [state_tm[s][1] for s in quad_ids]
         beta_list = [tu.tensor_double_dot(c, a) for c, a in zip(stiff_list, cte_list)]
 
-        c_v = weighted_sum(weights, stiff_list)
-        beta_v = weighted_sum(weights, beta_list)
-        c_v = tu.tensor_eigen_trans(c_v, eig_vecs)
-        beta_v = tu.tensor_eigen_trans(beta_v, eig_vecs)
-        a_v = tu.tensor_double_dot(tu.tensor_inverse(c_v), beta_v)
+        c_v_eigen = weighted_sum(weights, stiff_list)
+        beta_v_eigen = weighted_sum(weights, beta_list)
+        a_v_eigen = tu.tensor_double_dot(tu.tensor_inverse(c_v_eigen), beta_v_eigen)
 
         s_list = [tu.tensor_inverse(c) for c in stiff_list]
-        s_r = weighted_sum(weights, s_list)
-        s_r = tu.tensor_eigen_trans(s_r, eig_vecs)
-        c_r = tu.tensor_inverse(s_r)
+        s_r_eigen = weighted_sum(weights, s_list)
+        c_r_eigen = tu.tensor_inverse(s_r_eigen)
 
-        a_r = weighted_sum(weights, cte_list)
-        a_r = tu.tensor_eigen_trans(a_r, eig_vecs)
+        a_r_eigen = weighted_sum(weights, cte_list)
+
+        c_v = tu.tensor_eigen_trans(c_v_eigen, eig_vecs)
+        beta_v = tu.tensor_eigen_trans(beta_v_eigen, eig_vecs)
+        a_v = tu.tensor_double_dot(tu.tensor_inverse(c_v), beta_v)
+        s_r = tu.tensor_eigen_trans(s_r_eigen, eig_vecs)
+        c_r = tu.tensor_inverse(s_r)
+        a_r = tu.tensor_eigen_trans(a_r_eigen, eig_vecs)
 
         if "elastic" in types:
             _save_stiffness(output_index, c_v, c_r, out_dir)
+            _save_stiffness_eigen(output_index, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
             _save_cte(output_index, a_v, a_r, out_dir)
+            _save_cte_eigen(output_index, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in quad_ids]
-        k_v = weighted_sum(weights, k_list)
-        k_v = tu.tensor_eigen_trans(k_v, eig_vecs)
-        k_r_inv = weighted_sum(weights, [np.linalg.inv(k) for k in k_list])
-        k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv, eig_vecs))
+        k_v_eigen = weighted_sum(weights, k_list)
+        k_r_inv_eigen = weighted_sum(weights, [np.linalg.inv(k) for k in k_list])
+        k_r_eigen = np.linalg.inv(k_r_inv_eigen)
+
+        k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
+        k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
         _save_etc(output_index, k_v, k_r, out_dir)
+        _save_etc_eigen(output_index, k_v_eigen, k_r_eigen, out_dir)
 
 
 def main() -> None:
