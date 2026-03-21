@@ -9,7 +9,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # ============================= User Config =============================
 # Run only one DAF file each time.
-INDEX = "a1"
+INDEX = "b6"
 ANALYSIS_TYPE = ["tm", "etc"][0]
 DAF_FILE = f"Analysis_{INDEX}_{ANALYSIS_TYPE}.daf"
 TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"

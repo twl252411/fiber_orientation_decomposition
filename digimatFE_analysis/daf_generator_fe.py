@@ -6,7 +6,7 @@ from typing import Sequence
 
 # ============================= User Config =============================
 COMPO_ID = 0
-INDEX = "a3"
+INDEX = "b6"
 ANALYSIS_TPYE = ["tm", "etc"][0]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INPUT_DIR = PROJECT_ROOT / "point_angle_files"

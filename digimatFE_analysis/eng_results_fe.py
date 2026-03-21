@@ -6,9 +6,10 @@ import os
 
 
 # ============================= User Config =============================
-INDEX = "a1"
-TMP_DIR = f"tmp_{INDEX}"
-JAB_NAME = f"Analysis_{INDEX}"
+INDEX = "b6"
+ANALYSIS_TYPE = ["tm", "etc"][0]
+TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
+JAB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
 PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
