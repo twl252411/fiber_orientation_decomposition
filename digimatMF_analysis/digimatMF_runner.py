@@ -11,8 +11,8 @@ DEFAULT_DIGIMAT_EXE = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\digim
 
 
 # ============================= User Config =============================
-INDEX = "a1"
-ANALYSIS_TYPE = ["tm", "etc"][0]
+INDEX = "a2"
+ANALYSIS_TYPE = ["tm", "etc"][1]
 
 INPUT_FILE: str | None = None
 ANALYSIS_DIR = SCRIPT_DIR
@@ -25,7 +25,7 @@ DIGIMAT_BATCH_BAT = DEFAULT_DIGIMAT_BATCH_BAT
 DIGIMAT_EXE = DEFAULT_DIGIMAT_EXE
 
 LICENSE_WAIT = False
-RUN_IN_BACKGROUND = True
+RUN_IN_BACKGROUND = False
 SUBMIT_AS_MAT = True
 STAGE_INPUT_IN_TMP = True
 TIMEOUT_SECONDS: float | None = None
