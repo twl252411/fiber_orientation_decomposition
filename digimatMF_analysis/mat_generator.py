@@ -30,7 +30,7 @@ MATERIAL_PRESETS: list[dict[str, float]] = [
         "m1_poisson": 0.35,
         "m1_thermal_expansion": 2.6e-5,
         "m1_thermal_conductivity": 0.22,
-        "M1_SPECIFIC_HEAT_CAPACITY": 1.0,
+        "m1_specific_heat_capacity": 1.0,
         "m2_axial_young": 0.23313,
         "m2_inplane_young": 0.02311,
         "m2_inplane_poisson": 0.404,
@@ -38,16 +38,16 @@ MATERIAL_PRESETS: list[dict[str, float]] = [
         "m2_transverse_shear": 0.0897,
         "m2_axial_cte": -2.4e-6,
         "m2_inplane_cte": 6.4e-6,
-        "m2_axial_etc": 8.8,
-        "m2_inplane_etc": 2.0,
-        "m2_SPECIFIC_HEAT_CAPACITY": 1.0,
+        "m2_axial_thermal_conductivity": 8.8,
+        "m2_transverse_thermal_conductivity": 2.0,
+        "m2_specific_heat_capacity": 1.0,
     },
     {
         "m1_young": 0.003,
         "m1_poisson": 0.35,
         "m1_thermal_expansion": 7.0e-5,
         "m1_thermal_conductivity": 0.22,
-        "M1_SPECIFIC_HEAT_CAPACITY": 1.0,
+        "m1_specific_heat_capacity": 1.0,
         "m2_axial_young": 0.172,
         "m2_inplane_young": 0.172,
         "m2_inplane_poisson": 0.20,
@@ -55,10 +55,9 @@ MATERIAL_PRESETS: list[dict[str, float]] = [
         "m2_transverse_shear": 0.07167,
         "m2_axial_cte": 1.0e-6,
         "m2_inplane_cte": 1.0e-6,
-        "m2_inplane_cte": 6.4e-6,
-        "m2_axial_etc": 8.8,
-        "m2_inplane_etc": 2.0,
-        "m2_SPECIFIC_HEAT_CAPACITY": 1.0,
+        "m2_axial_thermal_conductivity": 8.8,
+        "m2_transverse_thermal_conductivity": 2.0,
+        "m2_specific_heat_capacity": 1.0,
     },
 ]
 
@@ -185,6 +184,13 @@ def _build_case_replacements(case: Mapping[str, Any]) -> dict[ReplacementKey, fl
         raise ValueError("orientation_vector must contain 6 values: [11,22,33,12,13,23].")
     ori_11, ori_22, ori_33, ori_12, ori_13, ori_23 = [float(v) for v in orientation_vector]
 
+    # Backward-compatible getter: prefer lower-case keys, accept legacy keys.
+    def _get_float(*keys: str, default: float) -> float:
+        for key in keys:
+            if key in case:
+                return float(case[key])
+        return float(default)
+
     replacements: dict[ReplacementKey, float | str] = {
         ("MATERIAL", 1, "Young"): float(case.get("m1_young", preset["m1_young"])),
         ("MATERIAL", 1, "Poisson"): float(case.get("m1_poisson", preset["m1_poisson"])),
@@ -193,6 +199,15 @@ def _build_case_replacements(case: Mapping[str, Any]) -> dict[ReplacementKey, fl
             1,
             "thermal_expansion",
         ): float(case.get("m1_thermal_expansion", preset["m1_thermal_expansion"])),
+        ("MATERIAL", 1, "thermal_conductivity"): _get_float(
+            "m1_thermal_conductivity",
+            default=preset["m1_thermal_conductivity"],
+        ),
+        ("MATERIAL", 1, "specific_heat_capacity"): _get_float(
+            "m1_specific_heat_capacity",
+            "M1_SPECIFIC_HEAT_CAPACITY",
+            default=preset["m1_specific_heat_capacity"],
+        ),
         ("MATERIAL", 2, "axial_Young"): float(case.get("m2_axial_young", preset["m2_axial_young"])),
         ("MATERIAL", 2, "inPlane_Young"): float(case.get("m2_inplane_young", preset["m2_inplane_young"])),
         (
@@ -212,6 +227,21 @@ def _build_case_replacements(case: Mapping[str, Any]) -> dict[ReplacementKey, fl
         ): float(case.get("m2_transverse_shear", preset["m2_transverse_shear"])),
         ("MATERIAL", 2, "axial_CTE"): float(case.get("m2_axial_cte", preset["m2_axial_cte"])),
         ("MATERIAL", 2, "inPlane_CTE"): float(case.get("m2_inplane_cte", preset["m2_inplane_cte"])),
+        ("MATERIAL", 2, "specific_heat_capacity"): _get_float(
+            "m2_specific_heat_capacity",
+            "m2_SPECIFIC_HEAT_CAPACITY",
+            default=preset["m2_specific_heat_capacity"],
+        ),
+        ("MATERIAL", 2, "axial_thermal_conductivity"): _get_float(
+            "m2_axial_thermal_conductivity",
+            "m2_axial_etc",
+            default=preset["m2_axial_thermal_conductivity"],
+        ),
+        ("MATERIAL", 2, "transverse_thermal_conductivity"): _get_float(
+            "m2_transverse_thermal_conductivity",
+            "m2_inplane_etc",
+            default=preset["m2_transverse_thermal_conductivity"],
+        ),
         ("PHASE", 1, "volume_fraction"): phase1_vf,
         ("PHASE", 2, "volume_fraction"): phase2_vf,
         ("PHASE", 2, "aspect_ratio"): aspect_ratio,
