@@ -12,7 +12,7 @@ DEFAULT_DIGIMAT_EXE = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\digim
 
 
 # ============================= User Config =============================
-INDEX = "a2"
+INDEX = "b3"
 ANALYSIS_TYPE = ["tm", "etc"][1]
 
 INPUT_FILE: str | None = None

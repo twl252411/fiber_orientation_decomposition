@@ -5,7 +5,7 @@ from typing import Sequence
 
 
 # ============================= User Config =============================
-INDEX = "a1"
+INDEX = "a2"
 ANALYSIS_TYPE = ["tm", "etc"][0]
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
@@ -93,9 +93,7 @@ def parse_etc(eng_path: Path) -> list[list[float]]:
     return _extract_numeric_block_with_candidates(
         lines,
         titles=[
-            "Thermal Conductivity Matrix in Global Axes",
-            "Conductivity Matrix in Global Axes",
-        ],
+            "Thermal Conductivity Tensor in Global Axes", ],
     )
 
 
