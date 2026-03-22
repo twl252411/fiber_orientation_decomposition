@@ -2,15 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
-import os
 
 
 # ============================= User Config =============================
 INDEX = "b6"
 ANALYSIS_TYPE = ["tm", "etc"][0]
-TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
-JAB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
-PROJECT_ROOT = r"H:\\github\\fiber_orientation_decomposition"
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
 
@@ -57,6 +53,16 @@ def _extract_numeric_block(lines: Sequence[str], title: str) -> list[list[float]
     return block
 
 
+def _extract_numeric_block_with_candidates(lines: Sequence[str], titles: Sequence[str]) -> list[list[float]]:
+    errors: list[str] = []
+    for title in titles:
+        try:
+            return _extract_numeric_block(lines, title)
+        except ValueError as exc:
+            errors.append(str(exc))
+    raise ValueError(" ; ".join(errors))
+
+
 def _write_csv_rows(path: Path, rows: Sequence[Sequence[float]]) -> None:
     with path.open("w", encoding="utf-8") as f:
         for row in rows:
@@ -64,44 +70,86 @@ def _write_csv_rows(path: Path, rows: Sequence[Sequence[float]]) -> None:
             f.write("\n")
 
 
-def parse_eng_file(eng_path: Path) -> tuple[list[list[float]], list[list[float]]]:
+def _normalize_analysis_type(value: str) -> str:
+    analysis_type = str(value).strip().lower()
+    if analysis_type not in {"tm", "etc"}:
+        raise ValueError(f"Unsupported ANALYSIS_TYPE: {value}. Expected 'tm' or 'etc'.")
+    return analysis_type
+
+
+def _normalize_index_tag(index: str | int) -> str:
+    if isinstance(index, int):
+        return f"a{index}"
+    tag = str(index).strip()
+    if not tag:
+        raise ValueError("INDEX is empty.")
+    if tag[0].lower() in {"a", "b"}:
+        return tag
+    return f"a{tag}"
+
+
+def _analysis_block_name(analysis_type: str) -> str:
+    return "Analysis1" if analysis_type == "tm" else "Analysis2"
+
+
+def parse_eng_tm(eng_path: Path) -> tuple[list[list[float]], list[list[float]]]:
     lines = eng_path.read_text(encoding="utf-8").splitlines()
     stiffness = _extract_numeric_block(lines, "Stiffness Matrix in Global Axes")
     cte = _extract_numeric_block(lines, "Thermal Expansion in Global Axes")
     return stiffness, cte
 
 
-def extract_and_save(
-    index: int,
-    input_dir: Path = Path("digimatFE_analysis"),
-    output_dir: Path | None = None,
-) -> tuple[Path, Path]:
+def parse_eng_etc(eng_path: Path) -> list[list[float]]:
+    lines = eng_path.read_text(encoding="utf-8").splitlines()
+    return _extract_numeric_block_with_candidates(
+        lines,
+        titles=[
+            "Thermal Conductivity Matrix in Global Axes",
+            "Conductivity Matrix in Global Axes",
+        ],
+    )
 
-    eng_path = Path(input_dir) / TMP_DIR / f"{JAB_NAME}_Analysis1.eng"
+
+def extract_and_save(
+    index: str | int = INDEX,
+    analysis_type: str = ANALYSIS_TYPE,
+    input_dir: Path = INPUT_DIR,
+    output_dir: Path | None = OUTPUT_DIR,
+) -> list[Path]:
+    analysis_type = _normalize_analysis_type(analysis_type)
+    index_tag = _normalize_index_tag(index)
+    tmp_dir = Path(input_dir) / f"tmp_{index_tag}_{analysis_type}"
+    eng_path = tmp_dir / f"Analysis_{index_tag}_{analysis_type}_{_analysis_block_name(analysis_type)}.eng"
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
 
-    stiffness, cte = parse_eng_file(eng_path)
+    out_dir = Path(input_dir) if output_dir is None else Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    out_dir = input_dir if output_dir is None else output_dir
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
-    stiffness_path = Path(out_dir) / f"Analysis_a{index}_Stiffness.txt"
-    cte_path = Path(out_dir) / f"Analysis_a{index}_CTE.txt"
+    if analysis_type == "tm":
+        stiffness, cte = parse_eng_tm(eng_path)
+        stiffness_path = out_dir / f"Analysis_{index_tag}_Stiffness.txt"
+        cte_path = out_dir / f"Analysis_{index_tag}_CTE.txt"
+        _write_csv_rows(stiffness_path, stiffness)
+        _write_csv_rows(cte_path, cte)
+        return [stiffness_path, cte_path]
 
-    _write_csv_rows(stiffness_path, stiffness)
-    _write_csv_rows(cte_path, cte)
-    return stiffness_path, cte_path
+    conductivity = parse_eng_etc(eng_path)
+    conductivity_path = out_dir / f"Analysis_{index_tag}_Conductivity.txt"
+    _write_csv_rows(conductivity_path, conductivity)
+    return [conductivity_path]
 
 
 def main() -> None:
-    stiffness_path, cte_path = extract_and_save(
+    saved_paths = extract_and_save(
         index=INDEX,
+        analysis_type=ANALYSIS_TYPE,
         input_dir=INPUT_DIR,
         output_dir=OUTPUT_DIR,
     )
     print("Saved:")
-    print(stiffness_path)
-    print(cte_path)
+    for path in saved_paths:
+        print(path)
 
 
 if __name__ == "__main__":
