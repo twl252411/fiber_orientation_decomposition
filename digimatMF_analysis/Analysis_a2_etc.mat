@@ -63,23 +63,14 @@ microstructure = Microstructure1
 
 ##########################################
 LOADING
-name = Mechanical
-type = strain
+name = Temperature_gradient
+type = temperature_gradient
 load = uniaxial_1
-initial_strain = 0.000000000000000e+00
-peak_strain = 3.000000000000000e-02
+initial_gradient = 0.000000000000000e+00
+peak_gradient = 1.000000000000000e+00
 history = monotonic
-quasi_static = on
 theta_load = 9.000000000000000e+01
 phi_load = 0.000000000000000e+00
-
-##########################################
-LOADING
-name = Temperature
-type = temperature
-initial_temperature = 0.000000000000000e+00
-peak_temperature = 1.000000000000000e+00
-history = monotonic
 
 ##########################################
 ANALYSIS
