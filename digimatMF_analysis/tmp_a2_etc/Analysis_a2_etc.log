@@ -1,0 +1,36 @@
+
+# DIGIMAT INFO : Digimat Log file - 22/03/2026  12:10:35
+#***************************************************************************#
+#                                  DIGIMAT                                  #
+#                              Version 2023.1                               #
+#                            (Tag : 9a82fdcac4)                             #
+#                        (Build date : 2023-Mar-26)                         #
+#                              (MSC licensing)                              #
+#                        By: MSC Software Belgium SA                        #
+#               Axis Park-Building H, 9, Rue Emile Francqui,                #
+#                    B-1435 Mont-Saint-Guibert, Belgium                     #
+# Copyright © 2023 Hexagon AB and/or its subsidiaries. All Rights Reserved. #
+# WARNING: This computer program is protected by copyright law and          #
+# international treaties. Unauthorized reproduction or distribution of this #
+# program, or any portion of it, may result in legal actions.               #
+#***************************************************************************#
+
+
+# DIGIMAT INFO : DIGIMAT_BIN_20231 = C:\MSC.Software\Digimat\2023.1\Digimat\exec
+# DIGIMAT INFO : DIGIMAT_Settings.ini file used for analysis is
+# C:\MSC.Software\Digimat\2023.1\Digimat\exec\DIGIMAT_Settings.ini
+
+
+# DIGIMAT INFO : Checking out license ... 
+
+# DIGIMAT INFO : MSC_LICENSE_FILE environment variable set to '27500@TIAN'.
+
+# DIGIMAT INFO : Used license location : '27500@TIAN'.
+
+# DIGIMAT INFO : License check out successful
+
+# DIGIMAT ERROR : LOADING name = Temperature_gradient was not found
+# DIGIMAT INFO : INPUT PROCESSOR ISSUED 1 ERROR AND 0 WARNING MESSAGES
+
+
+# DIGIMAT ERROR : DIGIMAT ANALYSIS TERMINATED BECAUSE OF ERRORS

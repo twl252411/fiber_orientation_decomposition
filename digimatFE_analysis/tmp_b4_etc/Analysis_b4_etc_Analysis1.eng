@@ -1,0 +1,39 @@
+#
+# Thermal Resistivity Tensor in Global Axes :
+#
+1.337131e+00 2.490674e-37 3.291214e-37 
+4.615633e-37 2.482992e+00 -4.504643e-37 
+6.163311e-37 -4.431270e-37 2.485707e+00 
+#
+# Thermal Conductivity Tensor in Global Axes :
+#
+7.478700e-01 -7.501838e-38 -9.902212e-38 
+-1.390216e-37 4.027400e-01 7.298527e-38 
+-1.854344e-37 7.179646e-38 4.023000e-01 
+#
+# Engineering Constants :
+#
+#
+# Thermal Conductivity : orthotropic symmetry, direction1 value :
+#
+7.478700e-01 
+#
+# Mismatch on : orthotropic symmetry, direction1 value :
+#
+2.182675e-37 
+#
+# Thermal Conductivity : orthotropic symmetry, direction2 value :
+#
+4.027400e-01 
+#
+# Mismatch on : orthotropic symmetry, direction2 value :
+#
+1.836686e-37 
+#
+# Thermal Conductivity : orthotropic symmetry, direction3 value :
+#
+4.023000e-01 
+#
+# Mismatch on : orthotropic symmetry, direction3 value :
+#
+2.159391e-37 
