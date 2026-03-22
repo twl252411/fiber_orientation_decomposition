@@ -4,8 +4,6 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
-import numpy as np
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -52,18 +50,18 @@ MATERIAL_PRESETS: list[dict[str, float]] = [
 
 # Orientation tensors
 ORI_2_AY = [
-    np.array([[0.58, 0.019, -0.015], [0.019, 0.17, -0.012], [-0.015, -0.012, 0.25]]),
-    np.array([[0.40, 0.069, 0.26], [0.069, 0.17, -0.001], [0.26, -0.001, 0.43]]),
-    np.array([[0.19, 0.028, 0.00], [0.028, 0.81, 0.0], [0.0, 0.0, 0.0]]),
+    [[0.58, 0.019, -0.015], [0.019, 0.17, -0.012], [-0.015, -0.012, 0.25]],
+    [[0.40, 0.069, 0.26], [0.069, 0.17, -0.001], [0.26, -0.001, 0.43]],
+    [[0.19, 0.028, 0.00], [0.028, 0.81, 0.0], [0.0, 0.0, 0.0]],
 ]
 
 ORI_2_BASE = [
-    np.diag([1.0, 0.0, 0.0]),
-    np.diag([1.0 / 2.0, 1.0 / 2.0, 0.0]),
-    np.diag([1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]),
-    np.diag([2.0 / 3.0, 1.0 / 6.0, 1.0 / 6.0]),
-    np.diag([3.0 / 4.0, 1.0 / 4.0, 0.0]),
-    np.diag([5.0 / 12.0, 5.0 / 12.0, 1.0 / 6.0]),
+    [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+    [[1.0 / 2.0, 0.0, 0.0], [0.0, 1.0 / 2.0, 0.0], [0.0, 0.0, 0.0]],
+    [[1.0 / 3.0, 0.0, 0.0], [0.0, 1.0 / 3.0, 0.0], [0.0, 0.0, 1.0 / 3.0]],
+    [[2.0 / 3.0, 0.0, 0.0], [0.0, 1.0 / 6.0, 0.0], [0.0, 0.0, 1.0 / 6.0]],
+    [[3.0 / 4.0, 0.0, 0.0], [0.0, 1.0 / 4.0, 0.0], [0.0, 0.0, 0.0]],
+    [[5.0 / 12.0, 0.0, 0.0], [0.0, 5.0 / 12.0, 0.0], [0.0, 0.0, 1.0 / 6.0]],
 ]
 
 # Batch generation list:
@@ -86,7 +84,7 @@ SECTION_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 SECTION_MARKER = "##########################################"
 
 
-def ori_vector_from_index(index: str) -> np.ndarray:
+def ori_vector_from_index(index: str) -> list[float]:
     if not isinstance(index, str) or len(index) < 2:
         raise ValueError("index must look like 'a1' or 'b3'.")
 
@@ -104,10 +102,14 @@ def ori_vector_from_index(index: str) -> np.ndarray:
     else:
         raise ValueError("index prefix must be 'a' or 'b'.")
 
-    return np.array(
-        [tensor[0, 0], tensor[1, 1], tensor[2, 2], tensor[0, 1], tensor[0, 2], tensor[1, 2]],
-        dtype=float,
-    )
+    return [
+        float(tensor[0][0]),
+        float(tensor[1][1]),
+        float(tensor[2][2]),
+        float(tensor[0][1]),
+        float(tensor[0][2]),
+        float(tensor[1][2]),
+    ]
 
 
 def _normalize_analysis_type(value: str) -> str:
