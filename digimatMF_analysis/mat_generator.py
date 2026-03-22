@@ -13,7 +13,7 @@ BASELINE_MAT_FILE = SCRIPT_DIR / "Template.mat"
 OUTPUT_DIR = SCRIPT_DIR
 
 COMPO_ID = 0
-DEFAULT_INDEX = "a2"
+DEFAULT_INDEX = "b3"
 DEFAULT_ANALYSIS_TYPE = ["tm", "etc"][1]
 
 # Adjustable defaults
