@@ -101,6 +101,22 @@ def _build_direct_exe_cmd(digimat_exe: Path, input_file: Path, license_wait: boo
     return cmd
 
 
+def _normalize_eng_name(working_dir: Path, job_name: str) -> Path | None:
+    # Digimat usually writes {job}_Analysis1.eng / {job}_Analysis2.eng.
+    # Normalize to {job}.eng for downstream parsers.
+    source_candidates = [
+        working_dir / f"{job_name}_Analysis1.eng",
+        working_dir / f"{job_name}_Analysis2.eng",
+    ]
+    target = working_dir / f"{job_name}.eng"
+    for source in source_candidates:
+        if source.exists():
+            source.replace(target)
+            print(f"Renamed ENG: {source.name} -> {target.name}")
+            return target
+    return None
+
+
 def _stage_submit_input(
     input_path: Path,
     tmp_dir: Path,
@@ -287,7 +303,7 @@ def run_digimat_by_index(
         stage_input_in_tmp=stage_input_in_tmp,
     )
 
-    return run_digimat_input(
+    run_result = run_digimat_input(
         input_file=submit_input,
         backend=backend,
         batch_bat=batch_bat,
@@ -301,6 +317,9 @@ def run_digimat_by_index(
         job_name=resolved_job_name,
         allow_gui_fallback=allow_gui_fallback,
     )
+    if not dry_run and isinstance(run_result, subprocess.CompletedProcess):
+        _normalize_eng_name(working_dir=resolved_tmp_dir, job_name=resolved_job_name)
+    return run_result
 
 
 # Backward-compatible alias

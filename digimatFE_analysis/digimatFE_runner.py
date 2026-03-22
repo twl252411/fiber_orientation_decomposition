@@ -90,8 +90,23 @@ def run_digimat_daf(
         raise
 
 
+def _normalize_eng_name(working_dir: Path, job_name: str) -> Path | None:
+    # Digimat often writes {job}_Analysis1.eng (or Analysis2). Normalize to {job}.eng.
+    source_candidates = [
+        working_dir / f"{job_name}_Analysis1.eng",
+        working_dir / f"{job_name}_Analysis2.eng",
+    ]
+    target = working_dir / f"{job_name}.eng"
+    for source in source_candidates:
+        if source.exists():
+            source.replace(target)
+            print(f"Renamed ENG: {source.name} -> {target.name}")
+            return target
+    return None
+
+
 def run_digimat_by_index(
-    index: int,
+    index: str | int,
     analysis_dir: Path = ANALYSIS_DIR,
     digimat_bat: Path = DEFAULT_DIGIMAT_BAT,
     use_run_fe_workflow_flag: bool = True,
@@ -119,7 +134,7 @@ def run_digimat_by_index(
     tmp_dir = analysis_dir / TMP_DIR
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    return run_digimat_daf(
+    result = run_digimat_daf(
         daf_path=daf_path,
         digimat_bat=digimat_bat,
         working_dir=tmp_dir,
@@ -129,6 +144,9 @@ def run_digimat_by_index(
         timeout=timeout,
         dry_run=dry_run,
     )
+    if not dry_run:
+        _normalize_eng_name(working_dir=tmp_dir, job_name=JAB_NAME)
+    return result
 
 
 def main() -> None:
