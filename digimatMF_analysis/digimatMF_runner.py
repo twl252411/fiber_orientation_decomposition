@@ -7,6 +7,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_DIGIMAT_BATCH_BAT = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\DigimatMF_batch.bat")
+DEFAULT_DIGIMAT_NOGUI_BAT = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\DigimatMF_nogui.bat")
 DEFAULT_DIGIMAT_EXE = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\digimat.exe")
 
 
@@ -22,7 +23,9 @@ JOB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
 
 RUNNER_BACKEND = ["batch_bat", "digimat_exe"][0]
 DIGIMAT_BATCH_BAT = DEFAULT_DIGIMAT_BATCH_BAT
+DIGIMAT_NOGUI_BAT = DEFAULT_DIGIMAT_NOGUI_BAT
 DIGIMAT_EXE = DEFAULT_DIGIMAT_EXE
+ALLOW_GUI_FALLBACK = False
 
 LICENSE_WAIT = False
 RUN_IN_BACKGROUND = True
@@ -74,13 +77,17 @@ def _analysis_block_name(analysis_type: str) -> str:
     return "Analysis1" if analysis_type == "tm" else "Analysis2"
 
 
-def _resolve_batch_bat(batch_bat: Path) -> Path:
+def _resolve_batch_bat(batch_bat: Path, nogui_bat: Path, allow_gui_fallback: bool) -> Path:
     preferred = Path(_sanitize_path_text(batch_bat))
+    preferred_nogui = Path(_sanitize_path_text(nogui_bat))
     candidates = [
+        preferred_nogui,
         preferred,
         preferred.parent / "DigimatMF_nogui.bat",
-        preferred.parent / "DigimatMF.bat",
+        preferred.parent / "DigimatMF_batch.bat",
     ]
+    if allow_gui_fallback:
+        candidates.append(preferred.parent / "DigimatMF.bat")
     for candidate in candidates:
         if candidate.exists():
             return candidate
@@ -145,6 +152,7 @@ def run_digimat_input(
     input_file: Path,
     backend: str = RUNNER_BACKEND,
     batch_bat: Path = DEFAULT_DIGIMAT_BATCH_BAT,
+    nogui_bat: Path = DEFAULT_DIGIMAT_NOGUI_BAT,
     digimat_exe: Path = DEFAULT_DIGIMAT_EXE,
     working_dir: Path | None = None,
     license_wait: bool = False,
@@ -152,6 +160,7 @@ def run_digimat_input(
     timeout: float | None = None,
     dry_run: bool = False,
     job_name: str | None = None,
+    allow_gui_fallback: bool = ALLOW_GUI_FALLBACK,
 ) -> subprocess.CompletedProcess[str] | subprocess.Popen[str] | None:
     input_file = Path(input_file).resolve()
     if not input_file.exists():
@@ -167,9 +176,19 @@ def run_digimat_input(
         raise ValueError(f"Unsupported RUNNER_BACKEND: {backend}. Expected 'batch_bat' or 'digimat_exe'.")
 
     if backend == "batch_bat":
-        batch_bat_path = _resolve_batch_bat(Path(batch_bat))
+        batch_bat_path = _resolve_batch_bat(
+            batch_bat=Path(batch_bat),
+            nogui_bat=Path(nogui_bat),
+            allow_gui_fallback=allow_gui_fallback,
+        )
         if not dry_run and not batch_bat_path.exists():
             raise FileNotFoundError(f"Digimat batch bat not found: {batch_bat_path}")
+        if not allow_gui_fallback and batch_bat_path.name.lower() == "digimatmf.bat":
+            raise RuntimeError(
+                f"Refusing GUI launcher in no-GUI mode: {batch_bat_path}. "
+                "Set ALLOW_GUI_FALLBACK=True if you really want GUI fallback."
+            )
+        print(f"Using batch launcher: {batch_bat_path}")
         wrapper = _write_batch_wrapper(
             batch_bat=batch_bat_path,
             input_file=input_file,
@@ -233,7 +252,9 @@ def run_digimat_by_index(
     job_name: str | None = None,
     backend: str = RUNNER_BACKEND,
     batch_bat: Path = DIGIMAT_BATCH_BAT,
+    nogui_bat: Path = DIGIMAT_NOGUI_BAT,
     digimat_exe: Path = DIGIMAT_EXE,
+    allow_gui_fallback: bool = ALLOW_GUI_FALLBACK,
     license_wait: bool = LICENSE_WAIT,
     submit_as_mat: bool = SUBMIT_AS_MAT,
     stage_input_in_tmp: bool = STAGE_INPUT_IN_TMP,
@@ -270,6 +291,7 @@ def run_digimat_by_index(
         input_file=submit_input,
         backend=backend,
         batch_bat=batch_bat,
+        nogui_bat=nogui_bat,
         digimat_exe=digimat_exe,
         working_dir=resolved_tmp_dir,
         license_wait=license_wait,
@@ -277,6 +299,7 @@ def run_digimat_by_index(
         timeout=timeout,
         dry_run=dry_run,
         job_name=resolved_job_name,
+        allow_gui_fallback=allow_gui_fallback,
     )
 
 
@@ -284,7 +307,9 @@ def run_digimat_by_index(
 def run_via_bat(
     input_file: Path,
     digimat_bat: Path = DIGIMAT_BATCH_BAT,
+    nogui_bat: Path = DIGIMAT_NOGUI_BAT,
     working_dir: Path | None = None,
+    allow_gui_fallback: bool = ALLOW_GUI_FALLBACK,
     license_wait: bool = LICENSE_WAIT,
     run_in_background: bool = False,
     timeout: float | None = None,
@@ -295,8 +320,10 @@ def run_via_bat(
         input_file=input_file,
         backend="batch_bat",
         batch_bat=digimat_bat,
+        nogui_bat=nogui_bat,
         digimat_exe=DIGIMAT_EXE,
         working_dir=working_dir,
+        allow_gui_fallback=allow_gui_fallback,
         license_wait=license_wait,
         run_in_background=run_in_background,
         timeout=timeout,
@@ -316,7 +343,9 @@ def main() -> None:
         job_name=JOB_NAME,
         backend=RUNNER_BACKEND,
         batch_bat=DIGIMAT_BATCH_BAT,
+        nogui_bat=DIGIMAT_NOGUI_BAT,
         digimat_exe=DIGIMAT_EXE,
+        allow_gui_fallback=ALLOW_GUI_FALLBACK,
         license_wait=LICENSE_WAIT,
         submit_as_mat=SUBMIT_AS_MAT,
         stage_input_in_tmp=STAGE_INPUT_IN_TMP,
