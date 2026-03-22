@@ -228,38 +228,45 @@ def load_etc_state(index: str, data_dir: Path) -> np.ndarray:
     return _symmetric_3x3_from_voigt6(etc_raw, name="ETC")
 
 
-def _save_stiffness(index: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_tm"
+def _source_tag(source: str) -> str:
+    tag = source.strip().lower()
+    if tag not in {"fe", "mf"}:
+        raise ValueError(f"SOURCE must be 'fe' or 'mf', got: {source}")
+    return tag
+
+
+def _save_stiffness(index: str, source: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_Stiffness_V.txt", tu.tensor_voigt(c_v), fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_Stiffness_R.txt", tu.tensor_voigt(c_r), fmt="%.6e", delimiter=",")
 
 
-def _save_stiffness_eigen(index: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_tm"
+def _save_stiffness_eigen(index: str, source: str, c_v: np.ndarray, c_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_Stiffness_Eigen_V.txt", tu.tensor_voigt(c_v), fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_Stiffness_Eigen_R.txt", tu.tensor_voigt(c_r), fmt="%.6e", delimiter=",")
 
 
-def _save_cte(index: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_tm"
+def _save_cte(index: str, source: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_CTE_V.txt", alpha_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_CTE_R.txt", alpha_r, fmt="%.6e", delimiter=",")
 
 
-def _save_cte_eigen(index: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_tm"
+def _save_cte_eigen(index: str, source: str, alpha_v: np.ndarray, alpha_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_CTE_Eigen_V.txt", alpha_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_CTE_Eigen_R.txt", alpha_r, fmt="%.6e", delimiter=",")
 
 
-def _save_etc(index: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_etc"
+def _save_etc(index: str, source: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_ETC_V.txt", k_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_ETC_R.txt", k_r, fmt="%.6e", delimiter=",")
 
 
-def _save_etc_eigen(index: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
-    base = f"Analysis_{index}_etc"
+def _save_etc_eigen(index: str, source: str, k_v: np.ndarray, k_r: np.ndarray, out_dir: Path) -> None:
+    base = f"Analysis_{index}_{_source_tag(source)}"
     np.savetxt(out_dir / f"{base}_ETC_Eigen_V.txt", k_v, fmt="%.6e", delimiter=",")
     np.savetxt(out_dir / f"{base}_ETC_Eigen_R.txt", k_r, fmt="%.6e", delimiter=",")
 
@@ -321,6 +328,7 @@ def _run_linear(
     state_tm: Dict[str, Tuple[np.ndarray, np.ndarray]],
     state_etc: Dict[str, np.ndarray],
     output_index: str,
+    source: str,
     out_dir: Path,
     types: Sequence[str],
 ) -> None:
@@ -351,11 +359,11 @@ def _run_linear(
         a_r = tu.tensor_eigen_trans(a_r_eigen, eig_vecs)
 
         if "elastic" in types:
-            _save_stiffness(output_index, c_v, c_r, out_dir)
-            _save_stiffness_eigen(output_index, c_v_eigen, c_r_eigen, out_dir)
+            _save_stiffness(output_index, source, c_v, c_r, out_dir)
+            _save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
-            _save_cte(output_index, a_v, a_r, out_dir)
-            _save_cte_eigen(output_index, a_v_eigen, a_r_eigen, out_dir)
+            _save_cte(output_index, source, a_v, a_r, out_dir)
+            _save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in lin_ids]
@@ -365,8 +373,8 @@ def _run_linear(
 
         k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
         k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
-        _save_etc(output_index, k_v, k_r, out_dir)
-        _save_etc_eigen(output_index, k_v_eigen, k_r_eigen, out_dir)
+        _save_etc(output_index, source, k_v, k_r, out_dir)
+        _save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
 
 
 def _run_quadratic(
@@ -376,6 +384,7 @@ def _run_quadratic(
     state_tm: Dict[str, Tuple[np.ndarray, np.ndarray]],
     state_etc: Dict[str, np.ndarray],
     output_index: str,
+    source: str,
     out_dir: Path,
     types: Sequence[str],
 ) -> None:
@@ -409,11 +418,11 @@ def _run_quadratic(
         a_r = tu.tensor_eigen_trans(a_r_eigen, eig_vecs)
 
         if "elastic" in types:
-            _save_stiffness(output_index, c_v, c_r, out_dir)
-            _save_stiffness_eigen(output_index, c_v_eigen, c_r_eigen, out_dir)
+            _save_stiffness(output_index, source, c_v, c_r, out_dir)
+            _save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
-            _save_cte(output_index, a_v, a_r, out_dir)
-            _save_cte_eigen(output_index, a_v_eigen, a_r_eigen, out_dir)
+            _save_cte(output_index, source, a_v, a_r, out_dir)
+            _save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in quad_ids]
@@ -423,8 +432,8 @@ def _run_quadratic(
 
         k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
         k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
-        _save_etc(output_index, k_v, k_r, out_dir)
-        _save_etc_eigen(output_index, k_v_eigen, k_r_eigen, out_dir)
+        _save_etc(output_index, source, k_v, k_r, out_dir)
+        _save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
 
 
 def main() -> None:
@@ -465,9 +474,9 @@ def main() -> None:
             etc_dict[sid] = load_etc_state(sid, data_dir)
 
     if INTERP == "linear":
-        _run_linear(pn, eig_vecs, LINEAR_NODE_IDS, tm_dict, etc_dict, output_index, out_dir, analysis_types)
+        _run_linear(pn, eig_vecs, LINEAR_NODE_IDS, tm_dict, etc_dict, output_index, SOURCE, out_dir, analysis_types)
     else:
-        _run_quadratic(pn, eig_vecs, states, tm_dict, etc_dict, output_index, out_dir, analysis_types)
+        _run_quadratic(pn, eig_vecs, states, tm_dict, etc_dict, output_index, SOURCE, out_dir, analysis_types)
 
 
 if __name__ == "__main__":
