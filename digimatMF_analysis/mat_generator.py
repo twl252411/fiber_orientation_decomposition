@@ -83,6 +83,7 @@ BATCH_CASES: list[dict[str, Any]] = [
 
 ReplacementKey = tuple[str, int, str]
 SECTION_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
+SECTION_MARKER = "##########################################"
 
 
 def ori_vector_from_index(index: str) -> np.ndarray:
@@ -246,6 +247,39 @@ def _apply_replacements(template_text: str, replacements: Mapping[ReplacementKey
     return "\n".join(output_lines).rstrip() + "\n"
 
 
+def _etc_loading_block() -> str:
+    return (
+        "##########################################\n"
+        "LOADING\n"
+        "name = Temperature_gradient\n"
+        "type = temperature_gradient\n"
+        "load = uniaxial_1\n"
+        "initial_gradient = 0.000000000000000e+00\n"
+        "peak_gradient = 1.000000000000000e+00\n"
+        "history = monotonic\n"
+        "theta_load = 9.000000000000000e+01\n"
+        "phi_load = 0.000000000000000e+00\n"
+        "\n"
+    )
+
+
+def _rewrite_loading_for_etc(text: str) -> str:
+    # Remove all existing LOADING sections, then insert one ETC loading block before ANALYSIS.
+    loading_pattern = re.compile(
+        rf"^{re.escape(SECTION_MARKER)}\nLOADING\n.*?(?=^{re.escape(SECTION_MARKER)}\n[A-Z][A-Z0-9_]*\n|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    text_without_loading = re.sub(loading_pattern, "", text)
+    insert_anchor = f"{SECTION_MARKER}\nANALYSIS\n"
+    insert_pos = text_without_loading.find(insert_anchor)
+    loading_block = _etc_loading_block()
+    if insert_pos >= 0:
+        rebuilt = text_without_loading[:insert_pos] + loading_block + text_without_loading[insert_pos:]
+    else:
+        rebuilt = text_without_loading.rstrip() + "\n\n" + loading_block
+    return rebuilt.rstrip() + "\n"
+
+
 def _output_name(case: Mapping[str, Any]) -> str:
     if "output_name" in case and str(case["output_name"]).strip():
         return str(case["output_name"])
@@ -264,8 +298,11 @@ def generate_one_mat(
         raise FileNotFoundError(f"Baseline MAT not found: {baseline_mat_file}")
 
     template_text = baseline_mat_file.read_text(encoding="utf-8")
+    analysis_type = _normalize_analysis_type(str(case.get("analysis_type", DEFAULT_ANALYSIS_TYPE)))
     replacements = _build_case_replacements(case)
     rendered = _apply_replacements(template_text, replacements)
+    if analysis_type == "etc":
+        rendered = _rewrite_loading_for_etc(rendered)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
