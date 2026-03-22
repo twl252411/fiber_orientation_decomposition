@@ -9,6 +9,7 @@ INDEX = "a1"
 ANALYSIS_TYPE = ["tm", "etc"][0]
 INPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR: Path | None = None
+TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
 
 
 def _format_float(value: float) -> str:
@@ -76,8 +77,8 @@ def _normalize_analysis_type(value: str) -> str:
     return analysis_type
 
 
-def _eng_path(index_tag: str, analysis_type: str, input_dir: Path) -> Path:
-    return Path(input_dir) / f"tmp_{index_tag}_{analysis_type}" / f"Analysis_{index_tag}_{analysis_type}.eng"
+def _eng_path(index_tag: str, analysis_type: str, input_dir: Path, tmp_dir: str) -> Path:
+    return Path(input_dir) / tmp_dir / f"Analysis_{index_tag}_{analysis_type}.eng"
 
 
 def parse_tm(eng_path: Path) -> tuple[list[list[float]], list[list[float]]]:
@@ -103,13 +104,14 @@ def extract_and_save(
     analysis_type: str = ANALYSIS_TYPE,
     input_dir: Path = INPUT_DIR,
     output_dir: Path | None = OUTPUT_DIR,
+    tmp_dir: str = TMP_DIR,
 ) -> list[Path]:
     analysis_type = _normalize_analysis_type(analysis_type)
     index_tag = str(index).strip()
     if not index_tag:
         raise ValueError("INDEX is empty.")
 
-    eng_path = _eng_path(index_tag=index_tag, analysis_type=analysis_type, input_dir=Path(input_dir))
+    eng_path = _eng_path(index_tag=index_tag, analysis_type=analysis_type, input_dir=Path(input_dir), tmp_dir=tmp_dir)
     if not eng_path.exists():
         raise FileNotFoundError(f"ENG file not found: {eng_path}")
     print(f"Using ENG file: {eng_path}")
@@ -138,6 +140,7 @@ def main() -> None:
         analysis_type=ANALYSIS_TYPE,
         input_dir=INPUT_DIR,
         output_dir=OUTPUT_DIR,
+        tmp_dir=TMP_DIR,
     )
     print("Saved:")
     for path in saved_paths:
