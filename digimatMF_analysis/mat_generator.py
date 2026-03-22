@@ -9,7 +9,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 # ============================== CONFIG ==============================
-BASELINE_MAT_FILE = SCRIPT_DIR / "Template.mat"
+TEMPLATE_TM_FILE = SCRIPT_DIR / "Template_tm.mat"
+TEMPLATE_ETC_FILE = SCRIPT_DIR / "Template_etc.mat"
+# Fallback only when case has unknown analysis type (should not happen).
+BASELINE_MAT_FILE = TEMPLATE_TM_FILE
 OUTPUT_DIR = SCRIPT_DIR
 
 COMPO_ID = 0
@@ -249,37 +252,12 @@ def _apply_replacements(template_text: str, replacements: Mapping[ReplacementKey
     return "\n".join(output_lines).rstrip() + "\n"
 
 
-def _etc_loading_block() -> str:
-    return (
-        "##########################################\n"
-        "LOADING\n"
-        "name = Temperature_gradient\n"
-        "type = temperature_gradient\n"
-        "load = uniaxial_1\n"
-        "initial_gradient = 0.000000000000000e+00\n"
-        "peak_gradient = 1.000000000000000e+00\n"
-        "history = monotonic\n"
-        "theta_load = 9.000000000000000e+01\n"
-        "phi_load = 0.000000000000000e+00\n"
-        "\n"
-    )
-
-
-def _rewrite_loading_for_etc(text: str) -> str:
-    # Remove all existing LOADING sections, then insert one ETC loading block before ANALYSIS.
-    loading_pattern = re.compile(
-        rf"^{re.escape(SECTION_MARKER)}\nLOADING\n.*?(?=^{re.escape(SECTION_MARKER)}\n[A-Z][A-Z0-9_]*\n|\Z)",
-        re.MULTILINE | re.DOTALL,
-    )
-    text_without_loading = re.sub(loading_pattern, "", text)
-    insert_anchor = f"{SECTION_MARKER}\nANALYSIS\n"
-    insert_pos = text_without_loading.find(insert_anchor)
-    loading_block = _etc_loading_block()
-    if insert_pos >= 0:
-        rebuilt = text_without_loading[:insert_pos] + loading_block + text_without_loading[insert_pos:]
-    else:
-        rebuilt = text_without_loading.rstrip() + "\n\n" + loading_block
-    return rebuilt.rstrip() + "\n"
+def _default_template_for_analysis_type(analysis_type: str) -> Path:
+    if analysis_type == "tm":
+        return TEMPLATE_TM_FILE
+    if analysis_type == "etc":
+        return TEMPLATE_ETC_FILE
+    return BASELINE_MAT_FILE
 
 
 def _output_name(case: Mapping[str, Any]) -> str:
@@ -295,16 +273,17 @@ def generate_one_mat(
     baseline_mat_file: Path = BASELINE_MAT_FILE,
     output_dir: Path = OUTPUT_DIR,
 ) -> Path:
-    baseline_mat_file = Path(baseline_mat_file)
+    analysis_type = _normalize_analysis_type(str(case.get("analysis_type", DEFAULT_ANALYSIS_TYPE)))
+    if "template_file" in case:
+        baseline_mat_file = Path(case["template_file"])
+    else:
+        baseline_mat_file = _default_template_for_analysis_type(analysis_type)
     if not baseline_mat_file.exists():
         raise FileNotFoundError(f"Baseline MAT not found: {baseline_mat_file}")
 
     template_text = baseline_mat_file.read_text(encoding="utf-8")
-    analysis_type = _normalize_analysis_type(str(case.get("analysis_type", DEFAULT_ANALYSIS_TYPE)))
     replacements = _build_case_replacements(case)
     rendered = _apply_replacements(template_text, replacements)
-    if analysis_type == "etc":
-        rendered = _rewrite_loading_for_etc(rendered)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -320,8 +299,7 @@ def generate_batch_mats(
 ) -> list[Path]:
     paths: list[Path] = []
     for case in cases:
-        case_template = Path(case["template_file"]) if "template_file" in case else Path(baseline_mat_file)
-        paths.append(generate_one_mat(case=case, baseline_mat_file=case_template, output_dir=output_dir))
+        paths.append(generate_one_mat(case=case, baseline_mat_file=Path(baseline_mat_file), output_dir=output_dir))
     return paths
 
 
