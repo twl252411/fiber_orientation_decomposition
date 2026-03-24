@@ -16,8 +16,13 @@ BASELINE_MAT_FILE = TEMPLATE_TM_FILE
 OUTPUT_DIR = SCRIPT_DIR
 
 COMPO_ID = 0
-DEFAULT_INDEX = "a2"
-DEFAULT_ANALYSIS_TYPE = ["tm", "etc"][1]
+INDEXES = ["a2"]
+ANALYSIS_TYPES = ["tm", "etc"]
+# 批量选择：默认使用全部；可改成如 [INDEXES[0]] / [ANALYSIS_TYPES[0]]
+SELECTED_INDEXES = INDEXES
+SELECTED_ANALYSIS_TYPES = ANALYSIS_TYPES
+DEFAULT_INDEX = SELECTED_INDEXES[0]
+DEFAULT_ANALYSIS_TYPE = SELECTED_ANALYSIS_TYPES[0]
 
 # Adjustable defaults
 PHASE2_VOLUME_FRACTION = 0.15
@@ -77,18 +82,25 @@ ORI_2_BASE = [
     [[5.0 / 12.0, 0.0, 0.0], [0.0, 5.0 / 12.0, 0.0], [0.0, 0.0, 1.0 / 6.0]],
 ]
 
+if not SELECTED_INDEXES:
+    raise ValueError("SELECTED_INDEXES is empty.")
+if not SELECTED_ANALYSIS_TYPES:
+    raise ValueError("SELECTED_ANALYSIS_TYPES is empty.")
+
 # Batch generation list:
 # - orientation_vector can override index-derived orientation.
 # - output_name can override default Analysis_{index}_{analysis_type}.mat.
 # - template_file can override BASELINE_MAT_FILE for this case only.
 BATCH_CASES: list[dict[str, Any]] = [
     {
-        "index": DEFAULT_INDEX,
-        "analysis_type": DEFAULT_ANALYSIS_TYPE,
+        "index": idx,
+        "analysis_type": a_type,
         "compo_id": COMPO_ID,
         "phase2_volume_fraction": PHASE2_VOLUME_FRACTION,
         "aspect_ratio": ASPECT_RATIO,
     }
+    for idx in SELECTED_INDEXES
+    for a_type in SELECTED_ANALYSIS_TYPES
 ]
 
 

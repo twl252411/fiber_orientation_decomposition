@@ -6,14 +6,14 @@ from typing import Sequence
 
 # ============================= User Config =============================
 COMPO_ID = 0
-INDEX = "a2"
-ANALYSIS_TPYE = ["tm", "etc"][1]
+INDEXES = ["a2"]
+ANALYSIS_TPYES = ["tm", "etc"]
+# 批量选择：默认使用全部；可改成如 [INDEXES[0]] / [ANALYSIS_TPYES[0]]
+SELECTED_INDEXES = INDEXES
+SELECTED_ANALYSIS_TPYES = ANALYSIS_TPYES
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INPUT_DIR = PROJECT_ROOT / "point_angle_files"
 OUTPUT_DIR = PROJECT_ROOT / "digimatFE_analysis"
-POINT_FILE = f"points_{INDEX}.txt"
-ANGLE_FILE = f"angles_{INDEX}.txt"
-ANALYSIS_NAME = f"Analysis_{INDEX}_{ANALYSIS_TPYE}.daf"
 
 # Material1 (isotropic): adjustable
 M1_YOUNG = [0.0448, 0.003][COMPO_ID]
@@ -393,31 +393,74 @@ def _build_daf_text(positions: list[list[float]], angles: list[list[float]], ana
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_one_daf() -> Path:
-    analysis_type = _normalize_analysis_type(ANALYSIS_TPYE)
+def _normalize_indexes(indexes: Sequence[str]) -> list[str]:
+    normalized = [str(idx).strip() for idx in indexes if str(idx).strip()]
+    if not normalized:
+        raise ValueError("SELECTED_INDEXES is empty.")
+    return normalized
 
-    angle_path = _resolve_input_file(
-        INPUT_DIR,
-        (ANGLE_FILE, ),
-    )
-    point_path = _resolve_input_file(
-        INPUT_DIR,
-        (POINT_FILE, ),
-    )
+
+def _normalize_analysis_types(analysis_types: Sequence[str]) -> list[str]:
+    normalized = [_normalize_analysis_type(v) for v in analysis_types]
+    if not normalized:
+        raise ValueError("SELECTED_ANALYSIS_TPYES is empty.")
+    return normalized
+
+
+def generate_one_daf(
+    index: str,
+    analysis_type: str,
+    input_dir: Path = INPUT_DIR,
+    output_dir: Path = OUTPUT_DIR,
+) -> Path:
+    analysis_type = _normalize_analysis_type(analysis_type)
+    index = str(index).strip()
+    if not index:
+        raise ValueError("index is empty.")
+
+    point_file = f"points_{index}.txt"
+    angle_file = f"angles_{index}.txt"
+
+    angle_path = _resolve_input_file(input_dir, (angle_file,))
+    point_path = _resolve_input_file(input_dir, (point_file,))
 
     positions = _read_table(point_path, min_cols=3)
     angles = _read_table(angle_path, min_cols=2)
     output_text = _build_daf_text(positions, angles, analysis_type=analysis_type)
 
-    output_dir = Path(OUTPUT_DIR)
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_name = ANALYSIS_NAME if ANALYSIS_NAME else f"Analysis_{INDEX}_{analysis_type}.daf"
+    output_name = f"Analysis_{index}_{analysis_type}.daf"
     output_path = output_dir / output_name
     output_path.write_text(output_text, encoding="utf-8")
     return output_path
 
 
+def generate_batch_dafs(
+    indexes: Sequence[str] = SELECTED_INDEXES,
+    analysis_types: Sequence[str] = SELECTED_ANALYSIS_TPYES,
+    input_dir: Path = INPUT_DIR,
+    output_dir: Path = OUTPUT_DIR,
+) -> list[Path]:
+    normalized_indexes = _normalize_indexes(indexes)
+    normalized_analysis_types = _normalize_analysis_types(analysis_types)
+
+    generated: list[Path] = []
+    for index in normalized_indexes:
+        for analysis_type in normalized_analysis_types:
+            generated.append(
+                generate_one_daf(
+                    index=index,
+                    analysis_type=analysis_type,
+                    input_dir=input_dir,
+                    output_dir=output_dir,
+                )
+            )
+    return generated
+
+
 if __name__ == "__main__":
-    generated_path = generate_one_daf()
-    print("Generated file:")
-    print(generated_path)
+    generated_paths = generate_batch_dafs()
+    print("Generated DAF files:")
+    for path in generated_paths:
+        print(path)

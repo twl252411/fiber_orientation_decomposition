@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Sequence
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -12,14 +13,16 @@ DEFAULT_DIGIMAT_EXE = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\digim
 
 
 # ============================= User Config =============================
-INDEX = "b3"
-ANALYSIS_TYPE = ["tm", "etc"][1]
+INDEXES = ["b3"]
+ANALYSIS_TYPES = ["tm", "etc"]
+# 批量选择：默认使用全部；可改成如 [INDEXES[0]] / [ANALYSIS_TYPES[0]]
+SELECTED_INDEXES = INDEXES
+SELECTED_ANALYSIS_TYPES = ANALYSIS_TYPES
+DEFAULT_INDEX = SELECTED_INDEXES[0]
+DEFAULT_ANALYSIS_TYPE = SELECTED_ANALYSIS_TYPES[0]
 
 INPUT_FILE: str | None = None
 ANALYSIS_DIR = SCRIPT_DIR
-
-TMP_DIR = f"tmp_{INDEX}_{ANALYSIS_TYPE}"
-JOB_NAME = f"Analysis_{INDEX}_{ANALYSIS_TYPE}"
 
 RUNNER_BACKEND = ["batch_bat", "digimat_exe"][0]
 DIGIMAT_BATCH_BAT = DEFAULT_DIGIMAT_BATCH_BAT
@@ -33,6 +36,27 @@ SUBMIT_AS_MAT = True
 STAGE_INPUT_IN_TMP = True
 TIMEOUT_SECONDS: float | None = None
 DRY_RUN = False
+
+
+def _normalize_analysis_type(value: str) -> str:
+    analysis_type = str(value).strip().lower()
+    if analysis_type not in {"tm", "etc"}:
+        raise ValueError(f"Unsupported ANALYSIS_TYPE: {value}. Expected 'tm' or 'etc'.")
+    return analysis_type
+
+
+def _normalize_indexes(indexes: Sequence[str]) -> list[str]:
+    normalized = [str(idx).strip() for idx in indexes if str(idx).strip()]
+    if not normalized:
+        raise ValueError("SELECTED_INDEXES is empty.")
+    return normalized
+
+
+def _normalize_analysis_types(analysis_types: Sequence[str]) -> list[str]:
+    normalized = [_normalize_analysis_type(v) for v in analysis_types]
+    if not normalized:
+        raise ValueError("SELECTED_ANALYSIS_TYPES is empty.")
+    return normalized
 
 
 def _sanitize_path_text(value: Path | str) -> str:
@@ -260,8 +284,8 @@ def run_digimat_input(
 
 
 def run_digimat_by_index(
-    index: str = INDEX,
-    analysis_type: str = ANALYSIS_TYPE,
+    index: str = DEFAULT_INDEX,
+    analysis_type: str = DEFAULT_ANALYSIS_TYPE,
     analysis_dir: Path = ANALYSIS_DIR,
     input_file: str | None = INPUT_FILE,
     tmp_dir: str | None = None,
@@ -278,9 +302,7 @@ def run_digimat_by_index(
     dry_run: bool = False,
     run_in_background: bool = False,
 ) -> subprocess.CompletedProcess[str] | subprocess.Popen[str] | None:
-    analysis_type = str(analysis_type).strip().lower()
-    if analysis_type not in {"tm", "etc"}:
-        raise ValueError(f"Unsupported ANALYSIS_TYPE: {analysis_type}. Expected 'tm' or 'etc'.")
+    analysis_type = _normalize_analysis_type(analysis_type)
 
     resolved_dir = _resolve_analysis_dir(analysis_dir)
     input_path = _resolve_input_file(resolved_dir, index=index, analysis_type=analysis_type, input_file=input_file)
@@ -351,27 +373,56 @@ def run_via_bat(
     )
 
 
+def run_batch(
+    indexes: Sequence[str] = SELECTED_INDEXES,
+    analysis_types: Sequence[str] = SELECTED_ANALYSIS_TYPES,
+    analysis_dir: Path = ANALYSIS_DIR,
+    input_file: str | None = INPUT_FILE,
+    backend: str = RUNNER_BACKEND,
+    batch_bat: Path = DIGIMAT_BATCH_BAT,
+    nogui_bat: Path = DIGIMAT_NOGUI_BAT,
+    digimat_exe: Path = DIGIMAT_EXE,
+    allow_gui_fallback: bool = ALLOW_GUI_FALLBACK,
+    license_wait: bool = LICENSE_WAIT,
+    submit_as_mat: bool = SUBMIT_AS_MAT,
+    stage_input_in_tmp: bool = STAGE_INPUT_IN_TMP,
+    timeout: float | None = TIMEOUT_SECONDS,
+    dry_run: bool = DRY_RUN,
+    run_in_background: bool = RUN_IN_BACKGROUND,
+) -> list[subprocess.CompletedProcess[str] | subprocess.Popen[str] | None]:
+    normalized_indexes = _normalize_indexes(indexes)
+    normalized_types = _normalize_analysis_types(analysis_types)
+
+    results: list[subprocess.CompletedProcess[str] | subprocess.Popen[str] | None] = []
+    for idx in normalized_indexes:
+        for a_type in normalized_types:
+            print(f"=== Running DigimatMF input ({a_type}) for index {idx} ===")
+            results.append(
+                run_digimat_by_index(
+                    index=idx,
+                    analysis_type=a_type,
+                    analysis_dir=analysis_dir,
+                    input_file=input_file,
+                    tmp_dir=None,
+                    job_name=None,
+                    backend=backend,
+                    batch_bat=batch_bat,
+                    nogui_bat=nogui_bat,
+                    digimat_exe=digimat_exe,
+                    allow_gui_fallback=allow_gui_fallback,
+                    license_wait=license_wait,
+                    submit_as_mat=submit_as_mat,
+                    stage_input_in_tmp=stage_input_in_tmp,
+                    timeout=timeout,
+                    dry_run=dry_run,
+                    run_in_background=run_in_background,
+                )
+            )
+    return results
+
+
 def main() -> None:
-    print(f"=== Running DigimatMF input ({ANALYSIS_TYPE}) for index {INDEX} ===")
-    run_digimat_by_index(
-        index=INDEX,
-        analysis_type=ANALYSIS_TYPE,
-        analysis_dir=ANALYSIS_DIR,
-        input_file=INPUT_FILE,
-        tmp_dir=TMP_DIR,
-        job_name=JOB_NAME,
-        backend=RUNNER_BACKEND,
-        batch_bat=DIGIMAT_BATCH_BAT,
-        nogui_bat=DIGIMAT_NOGUI_BAT,
-        digimat_exe=DIGIMAT_EXE,
-        allow_gui_fallback=ALLOW_GUI_FALLBACK,
-        license_wait=LICENSE_WAIT,
-        submit_as_mat=SUBMIT_AS_MAT,
-        stage_input_in_tmp=STAGE_INPUT_IN_TMP,
-        timeout=TIMEOUT_SECONDS,
-        dry_run=DRY_RUN,
-        run_in_background=RUN_IN_BACKGROUND,
-    )
+    run_batch()
 
 
 if __name__ == "__main__":
