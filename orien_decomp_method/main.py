@@ -109,74 +109,6 @@ def _load_txt_matrix(path: Path) -> np.ndarray:
     return np.asarray(arr, dtype=float)
 
 
-def _stiffness_from_input(raw: np.ndarray) -> np.ndarray:
-    """Parse stiffness input into 4th-order tensor.
-
-    Supported shapes:
-    - 6x6 full Voigt matrix
-    - length-9 independent components [C11,C12,C13,C22,C23,C33,C44,C55,C66]
-    """
-    arr = np.asarray(raw, dtype=float)
-
-    if arr.shape == (6, 6):
-        return tu.tensor_voigt(arr)
-
-    flat = arr.reshape(-1)
-    if flat.size == 9:
-        c11, c12, c13, c22, c23, c33, c44, c55, c66 = flat
-        voigt = np.array(
-            [
-                [c11, c12, c13, 0.0, 0.0, 0.0],
-                [c12, c22, c23, 0.0, 0.0, 0.0],
-                [c13, c23, c33, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, c44, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, c55, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 0.0, c66],
-            ],
-            dtype=float,
-        )
-        return tu.tensor_voigt(voigt)
-
-    raise ValueError(f"Unsupported stiffness shape {arr.shape}; expected (6,6) or length-9 vector.")
-
-
-def _symmetric_3x3_from_voigt6(raw: np.ndarray, name: str) -> np.ndarray:
-    arr = np.asarray(raw, dtype=float)
-
-    if arr.shape == (3, 3):
-        return arr
-
-    flat = arr.reshape(-1)
-    if flat.size != 6:
-        raise ValueError(f"Unsupported {name} shape {arr.shape}; expected (3,3) or length-6 vector.")
-
-    xx, yy, zz, xy, xz, yz = flat
-    return np.array(
-        [
-            [xx, xy, xz],
-            [xy, yy, yz],
-            [xz, yz, zz],
-        ],
-        dtype=float,
-    )
-
-
-def _cte_1x6_to_3x3(raw: np.ndarray) -> np.ndarray:
-    """Convert CTE [11,22,33,12,13,23] (1x6) to symmetric 3x3."""
-    flat = np.asarray(raw, dtype=float).reshape(-1)
-    if flat.size != 6:
-        raise ValueError(f"CTE must be 1x6 (or 6 values), got shape {np.asarray(raw).shape}.")
-    c11, c22, c33, c12, c13, c23 = flat
-    return np.array(
-        [
-            [c11, c12, c13],
-            [c12, c22, c23],
-            [c13, c23, c33],
-        ],
-        dtype=float,
-    )
-
-
 def _tm_file_candidates(index: str, quantity: str) -> List[str]:
     """Return candidate filenames for tm quantities.
 
@@ -218,14 +150,28 @@ def load_tm_state(index: str, data_dir: Path) -> Tuple[np.ndarray, np.ndarray]:
     cte_path = _first_existing_file(cte_candidates)
     stiff_raw = _load_txt_matrix(stiff_path)
     cte_raw = _load_txt_matrix(cte_path)
-    return _stiffness_from_input(stiff_raw), _cte_1x6_to_3x3(cte_raw)
+
+    if stiff_raw.shape != (6, 6):
+        raise ValueError(
+            f"Stiffness input must be 6x6 in {stiff_path}, got shape {stiff_raw.shape}."
+        )
+    if cte_raw.shape != (3, 3):
+        raise ValueError(
+            f"CTE input must be 3x3 in {cte_path}, got shape {cte_raw.shape}."
+        )
+
+    return tu.tensor_voigt(stiff_raw), cte_raw
 
 def load_etc_state(index: str, data_dir: Path) -> np.ndarray:
-    """Load one state's ETC result from txt as 3x3 symmetric tensor."""
+    """Load one state's ETC result from txt as 3x3 tensor."""
     etc_candidates = [data_dir / name for name in _etc_file_candidates(index)]
     etc_path = _first_existing_file(etc_candidates)
     etc_raw = _load_txt_matrix(etc_path)
-    return _symmetric_3x3_from_voigt6(etc_raw, name="ETC")
+    if etc_raw.shape != (3, 3):
+        raise ValueError(
+            f"ETC input must be 3x3 in {etc_path}, got shape {etc_raw.shape}."
+        )
+    return etc_raw
 
 
 def _source_tag(source: str) -> str:
