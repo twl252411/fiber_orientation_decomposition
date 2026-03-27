@@ -5,8 +5,8 @@ from typing import Sequence
 
 
 # ============================= User Config =============================
-COMPO_ID = 0
-INDEXES = ["a2"]
+COMPO_ID = 1
+INDEXES = ["a1", "a2", "a3", "b1", "b2", "b3", "b4", "b5", "b6"]
 ANALYSIS_TPYES = ["tm", "etc"]
 # 批量选择：默认使用全部；可改成如 [INDEXES[0]] / [ANALYSIS_TPYES[0]]
 SELECTED_INDEXES = INDEXES

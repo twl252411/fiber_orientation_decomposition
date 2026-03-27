@@ -13,7 +13,7 @@ DEFAULT_DIGIMAT_EXE = Path(r"C:\MSC.Software\Digimat\2023.1\DigimatMF\exec\digim
 
 
 # ============================= User Config =============================
-INDEXES = ["b3"]
+INDEXES = ["a1", "a2", "a3", "b1", "b2", "b3", "b4", "b5", "b6"]
 ANALYSIS_TYPES = ["tm", "etc"]
 # 批量选择：默认使用全部；可改成如 [INDEXES[0]] / [ANALYSIS_TYPES[0]]
 SELECTED_INDEXES = INDEXES

@@ -33,11 +33,10 @@ INTERP = ["linear", "quadratic"][0]
 ANALYSIS_TYPES = [
     ["elastic", "cte"],
     ["etc"],
-    ["elastic", "cte", "etc"],
-][0]
+    ["elastic", "cte", "etc"], ][2]
 
 # Choose orientation case: 1, 2, 3
-ORIENTATION_CASE = [1, 2, 3][1]
+ORIENTATION_CASE = [1, 2, 3][2]
 
 # Output index in Analysis_{Index}_{ANALYSIS_TYPE}.
 # If None, it is set automatically from INTERP ("linear" or "quadratic").
@@ -306,10 +305,10 @@ def _run_linear(
 
         if "elastic" in types:
             _save_stiffness(output_index, source, c_v, c_r, out_dir)
-            _save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
+            # _save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
             _save_cte(output_index, source, a_v, a_r, out_dir)
-            _save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
+            # _save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in lin_ids]
@@ -320,7 +319,7 @@ def _run_linear(
         k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
         k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
         _save_etc(output_index, source, k_v, k_r, out_dir)
-        _save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
+        # _save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
 
 
 def _run_quadratic(
@@ -365,10 +364,10 @@ def _run_quadratic(
 
         if "elastic" in types:
             _save_stiffness(output_index, source, c_v, c_r, out_dir)
-            _save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
+            #_save_stiffness_eigen(output_index, source, c_v_eigen, c_r_eigen, out_dir)
         if "cte" in types:
             _save_cte(output_index, source, a_v, a_r, out_dir)
-            _save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
+            #_save_cte_eigen(output_index, source, a_v_eigen, a_r_eigen, out_dir)
 
     if "etc" in types:
         k_list = [state_etc[s] for s in quad_ids]
@@ -379,7 +378,7 @@ def _run_quadratic(
         k_v = tu.tensor_eigen_trans(k_v_eigen, eig_vecs)
         k_r = np.linalg.inv(tu.tensor_eigen_trans(k_r_inv_eigen, eig_vecs))
         _save_etc(output_index, source, k_v, k_r, out_dir)
-        _save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
+        #_save_etc_eigen(output_index, source, k_v_eigen, k_r_eigen, out_dir)
 
 
 def main() -> None:
