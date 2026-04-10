@@ -514,3 +514,17 @@ python main.py
 **中文**
 - 当前脚本以“文件顶部参数配置”为主（修改常量即可运行）。后续可按需升级为命令行参数模式。
 - 仓库当前未集成自动化测试。
+
+---
+
+## 13. Citation / 引用
+
+**English**  
+If the codes are helpful, plese cite the paper:
+
+[1] Wenlong Tian, Tianbo Yang, Shaosong Chen, Lin Xu, Lehua Qi, Efficient prediction of effective mechanical and thermal properties of short-fiber composites via an orientation interpolation model reduction method, International Journal of Solids and Structures, 2026, Submitted.
+
+**中文**  
+如果本代码对您的研究有帮助，请引用以下论文：
+
+[1] Wenlong Tian, Tianbo Yang, Shaosong Chen, Lin Xu, Lehua Qi, Efficient prediction of effective mechanical and thermal properties of short-fiber composites via an orientation interpolation model reduction method, International Journal of Solids and Structures, 2026, Submitted.
